@@ -21,7 +21,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   }
 }
 
-rootProject.name = 'RdioCmaraSeteLagoas'
+rootProject.name = 'Rádio Câmara Sete Lagoas'
 
 dependencyResolutionManagement {
   versionCatalogs {

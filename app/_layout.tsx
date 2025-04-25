@@ -52,7 +52,9 @@ export default function RootLayout() {
       setSplashComplete(true);
     }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   if (!isSplashComplete) {
@@ -65,6 +67,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
+            animation: 'slide_from_right',
           }}
         />
       </SafeAreaProvider>

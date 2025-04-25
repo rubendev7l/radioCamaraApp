@@ -4,6 +4,7 @@ import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { RADIO_CONFIG } from '../../constants/radio';
 import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 
 interface NotificationSettings {
   general: boolean;
@@ -192,6 +193,22 @@ export default function SettingsScreen() {
           <Text style={[styles.infoText, { color: COLORS.TEXT.DARK }]}>
             De segunda a sexta-feira, das 8 às 17 horas.
           </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
+          Sobre o App
+        </Text>
+        <View style={styles.settingItem}>
+          <View style={styles.settingTextContainer}>
+            <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+              Versão
+            </Text>
+            <Text style={[styles.settingDescription, { color: COLORS.TEXT.DARK }]}>
+              {Constants.expoConfig?.version || '1.0.0'}
+            </Text>
+          </View>
         </View>
       </View>
     </ScrollView>

@@ -1,16 +1,15 @@
 // app/tabs/index.tsx
 import React from 'react';
-import { View, StyleSheet, Image, StatusBar, SafeAreaView } from 'react-native';
+import { View, StyleSheet, Image, StatusBar, SafeAreaView, BackHandler } from 'react-native';
 import { RadioPlayer } from '../../components/RadioPlayer';
 import { RADIO_CONFIG } from '../../constants/radio';
-import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   
   const handleExit = () => {
-    router.back();
+    BackHandler.exitApp();
   };
 
   return (

@@ -23,6 +23,7 @@ interface RadioStation {
   id: string;
   name: string;
   streamUrl: string;
+  description?: string;
 }
 
 interface RadioPlayerProps {
