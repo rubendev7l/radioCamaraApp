@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
+    "scheme": "radio-camara-sete-lagoas",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -29,8 +30,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FFFFFF",
-        "backgroundImage": "./assets/images/icon-background.png",
-        "padding": 8
+        "backgroundImage": "./assets/images/icon-background.png"
       },
       "package": "com.camarasete.radio",
       "versionCode": 1,

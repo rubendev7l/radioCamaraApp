@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 export const useAudioStream = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
@@ -65,9 +66,16 @@ export const useAudioStream = () => {
 
   const play = async () => {
     try {
+      setError(null);
       if (!soundRef.current) {
         const { sound } = await Audio.Sound.createAsync(
-          { uri: 'https://camarasete.mg.gov.br/stream' },
+          { 
+            uri: 'https://camarasete.mg.gov.br/stream',
+            headers: {
+              'User-Agent': 'RadioCamaraApp/1.0',
+            },
+            timeout: 30000, // 30 segundos de timeout
+          },
           { 
             shouldPlay: true,
             isLooping: true,
@@ -85,6 +93,7 @@ export const useAudioStream = () => {
       await updateNotification(true);
     } catch (error) {
       console.error('Error playing audio:', error);
+      setError(error instanceof Error ? error.message : 'Erro ao reproduzir áudio');
       setIsPlaying(false);
     }
   };
@@ -125,6 +134,7 @@ export const useAudioStream = () => {
   return {
     isPlaying,
     isBuffering,
+    error,
     play,
     pause,
   };
