@@ -5,20 +5,23 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
-  Modal,
   Text,
   Platform,
   AppState,
   AppStateStatus,
-  Linking,
   Alert,
+  Animated,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import { RADIO_CONFIG } from '../constants/radio';
 import { AudioWave } from './AudioWave';
 import * as Notifications from 'expo-notifications';
 
+/** 
+ * Interface que define a estrutura de uma estação de rádio
+ * Contém as informações necessárias para reprodução do stream
+ */
 interface RadioStation {
   id: string;
   name: string;
@@ -26,19 +29,81 @@ interface RadioStation {
   description?: string;
 }
 
+/** Props do componente principal do player de rádio */
 interface RadioPlayerProps {
   currentStation: RadioStation;
   onExit: () => void;
 }
 
 export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
+  const { width, height } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+
+  /** Estados principais para controle da reprodução */
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState as AppStateStatus);
+  
+  /** 
+   * Animação do indicador "AO VIVO"
+   * Controla a escala e opacidade do ponto vermelho
+   */
+  const liveDotScale = useRef(new Animated.Value(1)).current;
+  const liveDotOpacity = useRef(new Animated.Value(1)).current;
 
+  /** 
+   * Animação da descrição
+   * Controla o fade-in e movimento suave
+   */
+  const descriptionOpacity = useRef(new Animated.Value(0)).current;
+  const descriptionTranslateY = useRef(new Animated.Value(20)).current;
+
+  /** 
+   * Efeito que controla a animação do indicador "AO VIVO"
+   * Ativa quando está tocando e para quando está pausado
+   */
+  useEffect(() => {
+    if (isPlaying) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(liveDotScale, {
+              toValue: 1.2,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(liveDotOpacity, {
+              toValue: 0.5,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(liveDotScale, {
+              toValue: 1,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(liveDotOpacity, {
+              toValue: 1,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    } else {
+      liveDotScale.setValue(1);
+      liveDotOpacity.setValue(1);
+    }
+  }, [isPlaying]);
+
+  /** 
+   * Efeito de inicialização do player
+   * Configura o áudio, notificações e listeners de estado do app
+   */
   useEffect(() => {
     setupAudio();
     setupNotifications();
@@ -64,6 +129,10 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     };
   }, []);
 
+  /** 
+   * Configura o canal de notificações no Android
+   * Permite controle de reprodução pela notificação
+   */
   const setupNotifications = async () => {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('radio-playback', {
@@ -74,6 +143,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         bypassDnd: true,
         sound: null,
+        enableLights: true,
+        enableVibrate: false,
       });
     }
 
@@ -82,69 +153,64 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         shouldShowAlert: true,
         shouldPlaySound: false,
         shouldSetBadge: false,
+        priority: Notifications.AndroidNotificationPriority.MAX,
+        sticky: true,
+        vibrate: false,
+        android: {
+          channelId: 'radio-playback',
+          priority: 'max',
+          sticky: true,
+          icon: './assets/images/notification-icon.png',
+          color: '#FF231F7C',
+        },
       }),
     });
   };
 
+  /** 
+   * Gerencia mudanças de estado do app (background/foreground)
+   * Atualiza notificações conforme necessário
+   */
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      // App has come to foreground
-      await updateNotification();
+      if (isPlaying) {
+        await showNotification();
+      }
     }
     appState.current = nextAppState;
   };
 
-  const updateNotification = async () => {
-    if (isPlaying) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Rádio Câmara Sete Lagoas',
-          body: 'Tocando agora',
-          sound: false,
-          data: { url: currentStation.streamUrl },
-        },
-        trigger: null,
-      });
+  /** 
+   * Exibe/atualiza a notificação de reprodução
+   * Mostra controles e status atual (tocando/pausado)
+   */
+  const showNotification = async () => {
+    await Notifications.dismissAllNotificationsAsync();
 
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
+    const notificationContent = {
+      title: 'Rádio Câmara Sete Lagoas',
+      body: isPlaying ? 'Pausado' : 'Tocando agora',
+      sound: false,
+      data: { url: currentStation.streamUrl },
+      android: {
+        channelId: 'radio-playback',
+        priority: 'max',
+        sticky: true,
+        icon: './assets/images/notification-icon.png',
+        color: '#FF231F7C',
+      },
+    };
 
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationHandler({
-          handleNotification: async () => ({
-            shouldShowAlert: true,
-            shouldPlaySound: false,
-            shouldSetBadge: false,
-            priority: Notifications.AndroidNotificationPriority.MAX,
-            sticky: true,
-            vibrate: false,
-            android: {
-              channelId: 'radio-playback',
-              actions: [
-                {
-                  title: isPlaying ? 'Pausar' : 'Tocar',
-                  icon: isPlaying ? 'ic_pause' : 'ic_play',
-                  identifier: 'TOGGLE_PLAYBACK',
-                  buttonType: 'default',
-                },
-                {
-                  title: 'Fechar',
-                  icon: 'ic_close',
-                  identifier: 'STOP',
-                  buttonType: 'cancel',
-                },
-              ],
-            },
-          }),
-        });
-      }
-    } else {
-      await Notifications.dismissAllNotificationsAsync();
-    }
+    await Notifications.scheduleNotificationAsync({
+      content: notificationContent,
+      trigger: null,
+    });
   };
 
+  /** 
+   * Configura o player de áudio
+   * Habilita reprodução em background e monitora status
+   */
   const setupAudio = async () => {
     try {
       await Audio.setAudioModeAsync({
@@ -161,21 +227,16 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded) {
           setIsPlaying(status.isPlaying);
-          setIsBuffering(status.isBuffering);
           setHasError(false);
-          if (status.isPlaying) {
-            updateNotification();
-          }
         } else {
           setHasError(true);
         }
       });
 
-      // Configurar análise de áudio
       if (Platform.OS === 'android') {
         await sound.setVolumeAsync(1.0);
         await sound.setIsMutedAsync(false);
-        await sound.setProgressUpdateIntervalAsync(100); // Atualizar a cada 100ms
+        await sound.setProgressUpdateIntervalAsync(100);
       }
     } catch (error) {
       console.error('Error setting up audio:', error);
@@ -183,14 +244,20 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     }
   };
 
+  /** 
+   * Alterna entre reprodução e pausa
+   * Atualiza notificações e estado do player
+   */
   const togglePlayback = async () => {
     if (!soundRef.current) return;
 
     try {
       if (isPlaying) {
         await soundRef.current.pauseAsync();
+        await showNotification();
       } else {
         await soundRef.current.playAsync();
+        await showNotification();
       }
     } catch (error) {
       console.error('Error toggling playback:', error);
@@ -198,6 +265,10 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     }
   };
 
+  /** 
+   * Controla o mudo/desmudo do áudio
+   * Mantém a reprodução mas sem som
+   */
   const toggleMute = async () => {
     if (!soundRef.current) return;
 
@@ -209,6 +280,10 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     }
   };
 
+  /** 
+   * Gerencia o processo de saída do app
+   * Confirma com o usuário antes de fechar
+   */
   const handleClosePress = () => {
     Alert.alert(
       'Sair do aplicativo',
@@ -229,17 +304,25 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     );
   };
 
+  /** 
+   * Limpa recursos e fecha o app
+   * Para a reprodução e remove notificações
+   */
   const handleExit = async () => {
     if (soundRef.current) {
       await soundRef.current.stopAsync();
       await soundRef.current.unloadAsync();
     }
+    await Notifications.dismissAllNotificationsAsync();
     onExit();
   };
 
+  /** 
+   * Tenta reconectar em caso de erro
+   * Reinicia o player e a reprodução
+   */
   const handleReload = async () => {
     setHasError(false);
-    setIsBuffering(true);
     try {
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
@@ -249,123 +332,290 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         await soundRef.current.playAsync();
       }
     } catch (error) {
-      console.error('Error reloading audio:', error);
+      console.error('Error reloading:', error);
       setHasError(true);
-    } finally {
-      setIsBuffering(false);
     }
   };
 
+  /** 
+   * Efeito que controla a animação da descrição
+   * Inicia quando o componente é montado
+   */
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(descriptionOpacity, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(descriptionTranslateY, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  /** 
+   * Renderiza o player de rádio com layout responsivo
+   * Adapta-se para web e mobile com diferentes tamanhos
+   */
   return (
     <ImageBackground
       source={require('../assets/images/background.jpg')}
       style={styles.background}
+      resizeMode="cover"
     >
-      <View style={styles.content}>
-        <Image 
-          source={require('../assets/images/logo-white.png')}
-          style={styles.logo}
-        />
-        
-        <View style={styles.waveContainer}>
-          <AudioWave isPlaying={isPlaying} />
-        </View>
-        
-        <View style={styles.controls}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={toggleMute}
-            accessibilityLabel={isMuted ? "Ativar som" : "Desativar som"}
-            accessibilityRole="button"
+      {/** Container principal com layout responsivo */}
+      <View style={[
+        styles.content,
+        isWeb && {
+          flex: 1,
+          width: '100%',
+          height: height,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: Math.min(width * 0.05, 20),
+        }
+      ]}>
+        {/** Container interno com largura máxima para melhor legibilidade */}
+        <View style={[
+          styles.innerContent,
+          isWeb && {
+            width: '100%',
+            maxWidth: Math.min(width * 0.9, 800),
+            alignItems: 'center',
+            justifyContent: 'center',
+          }
+        ]}>
+          {/** Descrição da estação com animação */}
+          <Animated.Text 
+            style={[
+              styles.description,
+              isWeb && {
+                fontSize: Math.min(width * 0.02, 16),
+                marginBottom: Math.min(height * 0.02, 20),
+              },
+              {
+                opacity: descriptionOpacity,
+                transform: [{ translateY: descriptionTranslateY }],
+              }
+            ]}
           >
-            <Ionicons 
-              name={isMuted ? "volume-mute" : "volume-high"} 
-              size={24} 
-              color="white" 
-            />
-          </TouchableOpacity>
+            {currentStation.description}
+          </Animated.Text>
 
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={togglePlayback}
-            accessibilityLabel={isPlaying ? "Pausar" : "Tocar"}
-            accessibilityRole="button"
-          >
-            <Ionicons 
-              name={isPlaying ? "pause" : "play"} 
-              size={32} 
-              color="white" 
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={handleClosePress}
-            accessibilityLabel="Fechar"
-            accessibilityRole="button"
-          >
-            <Ionicons name="close" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.statusContainer}>
-          {isPlaying ? (
-            <View style={styles.liveContainer}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>AO VIVO</Text>
-            </View>
-          ) : (
-            <Text style={styles.offlineText}>OFFLINE</Text>
-          )}
-        </View>
-
-        {isBuffering && (
-          <View style={styles.bufferingContainer}>
-            <Ionicons name="refresh" size={24} color="#FFFFFF" />
+          {/** Logo da rádio com tamanho responsivo */}
+          <Image 
+            source={require('../assets/images/logo-white.png')}
+            style={[
+              styles.logo,
+              isWeb && {
+                width: Math.min(width * 0.4, 400),
+                height: Math.min(height * 0.3, 300),
+                marginBottom: 5,
+              }
+            ]}
+          />
+          
+          {/** Container da onda de áudio com largura responsiva */}
+          <View style={[
+            styles.waveContainer,
+            isWeb && {
+              width: '100%',
+              maxWidth: Math.min(width * 0.9, 800),
+            }
+          ]}>
+            <AudioWave isPlaying={isPlaying} />
           </View>
-        )}
-
-        {hasError && (
-          <View style={styles.errorContainer}>
-            <TouchableOpacity 
-              style={styles.reloadButton}
-              onPress={handleReload}
+          
+          {/** Controles de reprodução com layout responsivo */}
+          <View style={[
+            styles.controls,
+            isWeb && {
+              width: '100%',
+              maxWidth: Math.min(width * 0.6, 600),
+              justifyContent: 'center',
+            }
+          ]}>
+            {/** Botão de mudo com tamanho adaptativo */}
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                isWeb && {
+                  width: Math.min(width * 0.15, 80),
+                  height: Math.min(width * 0.15, 80),
+                  borderRadius: Math.min(width * 0.075, 40),
+                }
+              ]}
+              onPress={toggleMute}
+              accessibilityLabel={isMuted ? "Ativar som" : "Desativar som"}
+              accessibilityRole="button"
             >
-              <Ionicons name="refresh" size={24} color="#FFFFFF" />
-              <Text style={styles.reloadText}>Recarregar</Text>
+              <Ionicons
+                name={isMuted ? "volume-mute" : "volume-high"} 
+                size={isWeb ? Math.min(width * 0.04, 32) : 24}
+                color="white" 
+              />
+            </TouchableOpacity>
+
+            {/** Botão principal de play/pause com tamanho adaptativo */}
+            <TouchableOpacity
+              style={[
+                styles.playButton,
+                isWeb && {
+                  width: Math.min(width * 0.2, 120),
+                  height: Math.min(width * 0.2, 120),
+                  borderRadius: Math.min(width * 0.1, 60),
+                }
+              ]}
+              onPress={togglePlayback}
+              accessibilityLabel={isPlaying ? "Pausar" : "Tocar"}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name={isPlaying ? "pause" : "play"} 
+                size={isWeb ? Math.min(width * 0.06, 48) : 32}
+                color="white" 
+              />
+            </TouchableOpacity>
+
+            {/** Botão de fechar com tamanho adaptativo */}
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                isWeb && {
+                  width: Math.min(width * 0.15, 80),
+                  height: Math.min(width * 0.15, 80),
+                  borderRadius: Math.min(width * 0.075, 40),
+                }
+              ]}
+              onPress={handleClosePress}
+              accessibilityLabel="Fechar"
+              accessibilityRole="button"
+            >
+              <Ionicons 
+                name="close" 
+                size={isWeb ? Math.min(width * 0.04, 32) : 24} 
+                color="white" 
+              />
             </TouchableOpacity>
           </View>
-        )}
+
+          {/** Container do status de transmissão */}
+          <View style={[
+            styles.statusWrapper,
+            isWeb && {
+              marginTop: Math.min(height * 0.09, 60),
+            }
+          ]}>
+            <View style={styles.statusContainer}>
+              {isPlaying ? (
+                <View style={styles.liveContainer}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>AO VIVO</Text>
+                </View>
+              ) : (
+                <Text style={styles.offlineText}>OFFLINE</Text>
+              )}
+            </View>
+          </View>
+
+          {/** Botão de recarregar em caso de erro */}
+          {hasError && (
+            <View style={[
+              styles.errorContainer,
+              isWeb && {
+                marginTop: Math.min(height * 0.05, 40),
+              }
+            ]}>
+              <TouchableOpacity 
+                style={[
+                  styles.reloadButton,
+                  isWeb && {
+                    paddingHorizontal: Math.min(width * 0.03, 24),
+                    paddingVertical: Math.min(height * 0.015, 12),
+                  }
+                ]}
+                onPress={handleReload}
+              >
+                <Ionicons 
+                  name="refresh" 
+                  size={isWeb ? Math.min(width * 0.04, 32) : 24} 
+                  color="#FFFFFF" 
+                />
+                <Text style={[
+                  styles.reloadText,
+                  isWeb && {
+                    fontSize: Math.min(width * 0.02, 16),
+                    marginLeft: Math.min(width * 0.015, 12),
+                  }
+                ]}>Recarregar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
     </ImageBackground>
   );
 }
 
+/** 
+ * Estilos do componente
+ * Usa valores responsivos para web e fixos para mobile
+ */
 const styles = StyleSheet.create({
+  /** Estilo do background que cobre toda a tela */
   background: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
+  /** Estilo da imagem de fundo */
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  },
+  /** Container principal com flex para centralização */
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 0,
+    width: '100%',
+    height: '100%',
   },
+  /** Container interno para controle de largura máxima */
+  innerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  /** Logo com tamanho fixo para mobile */
   logo: {
     width: 280,
     height: 200,
-    marginBottom: 20,
+    marginBottom: 5,
     resizeMode: 'contain',
   },
+  /** Container da onda de áudio */
   waveContainer: {
     width: '100%',
     alignItems: 'center',
   },
+  /** Container dos controles de reprodução */
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 32,
   },
+  /** Estilo dos botões de controle (mudo e fechar) */
   controlButton: {
     width: 60,
     height: 60,
@@ -375,6 +625,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 15,
   },
+  /** Estilo do botão principal de play/pause */
   playButton: {
     width: 90,
     height: 90,
@@ -384,10 +635,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 15,
   },
+  /** Container do status de transmissão */
+  statusWrapper: {
+    marginTop: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** Container interno do status */
   statusContainer: {
-    marginTop: 20,
     alignItems: 'center',
   },
+  /** Container do indicador "AO VIVO" */
   liveContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -396,6 +654,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
+  /** Ponto vermelho do indicador "AO VIVO" */
   liveDot: {
     width: 8,
     height: 8,
@@ -403,24 +662,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF0000',
     marginRight: 15,
   },
+  /** Texto do indicador "AO VIVO" */
   liveText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
   },
+  /** Texto do status "OFFLINE" */
   offlineText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
     opacity: 0.7,
   },
-  bufferingContainer: {
-    marginTop: 20,
-  },
+  /** Container do botão de recarregar */
   errorContainer: {
     marginTop: 20,
     alignItems: 'center',
   },
+  /** Estilo do botão de recarregar */
   reloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -429,10 +689,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
+  /** Texto do botão de recarregar */
   reloadText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  description: {
+    color: '#E6F0FF',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    opacity: 0.95,
+    marginTop: 20,
+    fontWeight: '500',
   },
 }); 
