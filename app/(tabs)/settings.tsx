@@ -1,16 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { RADIO_CONFIG } from '../../constants/radio';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface NotificationSettings {
   general: boolean;
   sessions: boolean;
   specialPrograms: boolean;
   maintenance: boolean;
+  playback: boolean;
 }
 
 export default function SettingsScreen() {
@@ -19,13 +21,36 @@ export default function SettingsScreen() {
     sessions: true,
     specialPrograms: true,
     maintenance: true,
+    playback: true,
   });
 
-  const handleNotificationChange = (type: keyof NotificationSettings) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      [type]: !prev[type]
-    }));
+  React.useEffect(() => {
+    loadNotificationSettings();
+  }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await AsyncStorage.getItem('notificationSettings');
+      if (settings) {
+        setNotificationSettings(JSON.parse(settings));
+      }
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  };
+
+  const handleNotificationChange = async (type: keyof NotificationSettings) => {
+    const newSettings = {
+      ...notificationSettings,
+      [type]: !notificationSettings[type]
+    };
+    setNotificationSettings(newSettings);
+    
+    try {
+      await AsyncStorage.setItem('notificationSettings', JSON.stringify(newSettings));
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+    }
   };
 
   const handleSocialMediaPress = async (url: string) => {
@@ -37,192 +62,164 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: COLORS.BACKGROUND }]}>
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
-          Notificações
-        </Text>
-        <View style={styles.settingItem}>
-          <View style={styles.settingTextContainer}>
-            <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
-              Notificações Gerais
-            </Text>
-            <Text style={[styles.settingDescription, { color: COLORS.TEXT.DARK }]}>
-              Receba alertas sobre transmissões ao vivo e programação especial
-            </Text>
-          </View>
-          <Switch
-            value={notificationSettings.general}
-            onValueChange={() => handleNotificationChange('general')}
-            trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
-            thumbColor={COLORS.TEXT.DARK}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingTextContainer}>
-            <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
-              Sessões da Câmara
-            </Text>
-            <Text style={[styles.settingDescription, { color: COLORS.TEXT.DARK }]}>
-              Avisos sobre início de sessões legislativas
-            </Text>
-          </View>
-          <Switch
-            value={notificationSettings.sessions}
-            onValueChange={() => handleNotificationChange('sessions')}
-            trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
-            thumbColor={COLORS.TEXT.DARK}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingTextContainer}>
-            <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
-              Programas Especiais
-            </Text>
-            <Text style={[styles.settingDescription, { color: COLORS.TEXT.DARK }]}>
-              Alertas sobre entrevistas e programas especiais
-            </Text>
-          </View>
-          <Switch
-            value={notificationSettings.specialPrograms}
-            onValueChange={() => handleNotificationChange('specialPrograms')}
-            trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
-            thumbColor={COLORS.TEXT.DARK}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingTextContainer}>
-            <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
-              Manutenção e Atualizações
-            </Text>
-            <Text style={[styles.settingDescription, { color: COLORS.TEXT.DARK }]}>
-              Avisos sobre manutenção programada e atualizações do app
-            </Text>
-          </View>
-          <Switch
-            value={notificationSettings.maintenance}
-            onValueChange={() => handleNotificationChange('maintenance')}
-            trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
-            thumbColor={COLORS.TEXT.DARK}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
-          Redes Sociais
-        </Text>
-        <TouchableOpacity 
-          style={styles.socialButton}
-          onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.FACEBOOK)}
-        >
-          <Ionicons name="logo-facebook" size={24} color={COLORS.PRIMARY} />
-          <Text style={[styles.socialText, { color: COLORS.TEXT.DARK }]}>
-            Facebook
+    <View style={[styles.container, { backgroundColor: COLORS.BACKGROUND }]}>
+      <View style={styles.content}>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
+            Notificações
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.socialButton}
-          onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.INSTAGRAM)}
-        >
-          <Ionicons name="logo-instagram" size={24} color={COLORS.PRIMARY} />
-          <Text style={[styles.socialText, { color: COLORS.TEXT.DARK }]}>
-            Instagram
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.socialButton}
-          onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.YOUTUBE)}
-        >
-          <Ionicons name="logo-youtube" size={24} color={COLORS.PRIMARY} />
-          <Text style={[styles.socialText, { color: COLORS.TEXT.DARK }]}>
-            YouTube
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.socialButton}
-          onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.FLICKR)}
-        >
-          <Ionicons name="logo-flickr" size={24} color={COLORS.PRIMARY} />
-          <Text style={[styles.socialText, { color: COLORS.TEXT.DARK }]}>
-            Flickr
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
-          Suporte
-        </Text>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: COLORS.PRIMARY }]}
-          onPress={() => Linking.openURL('mailto:rodrigo.cpd@camarasete.mg.gov.br?subject=Suporte%20Técnico%20-%20App%20Rádio%20Câmara&body=Olá,%20gostaria%20de%20reportar%20um%20problema%20com%20o%20aplicativo:')}
-          accessibilityLabel="Enviar e-mail para suporte técnico"
-          accessibilityRole="button"
-        >
-          <Ionicons name="mail" size={24} color="white" />
-          <Text style={[styles.buttonText, { color: 'white' }]}>Suporte Técnico</Text>
-        </TouchableOpacity>
-
-        <View style={[styles.infoCard, { backgroundColor: COLORS.BACKGROUND }]}>
-          <View style={styles.infoHeader}>
-            <Ionicons 
-              name="information-circle" 
-              size={24} 
-              color={COLORS.PRIMARY} 
+          <View style={styles.settingItem}>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+                Notificações Gerais
+              </Text>
+            </View>
+            <Switch
+              value={notificationSettings.general}
+              onValueChange={() => handleNotificationChange('general')}
+              trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
+              thumbColor={COLORS.TEXT.DARK}
             />
-            <Text style={[styles.infoTitle, { color: COLORS.TEXT.DARK }]}>
-              E se a RÁDIO estiver fora do ar?
-            </Text>
           </View>
-          <Text style={[styles.infoText, { color: COLORS.TEXT.DARK }]}>
-            Em caso de dúvida ou se a sintonia da RÁDIO Câmara não estiver pegando ou com problemas, ligue:
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+                Sessões da Câmara
+              </Text>
+            </View>
+            <Switch
+              value={notificationSettings.sessions}
+              onValueChange={() => handleNotificationChange('sessions')}
+              trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
+              thumbColor={COLORS.TEXT.DARK}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+                Programas Especiais
+              </Text>
+            </View>
+            <Switch
+              value={notificationSettings.specialPrograms}
+              onValueChange={() => handleNotificationChange('specialPrograms')}
+              trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
+              thumbColor={COLORS.TEXT.DARK}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+                Manutenção
+              </Text>
+            </View>
+            <Switch
+              value={notificationSettings.maintenance}
+              onValueChange={() => handleNotificationChange('maintenance')}
+              trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
+              thumbColor={COLORS.TEXT.DARK}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+                Notificações de Reprodução
+              </Text>
+            </View>
+            <Switch
+              value={notificationSettings.playback}
+              onValueChange={() => handleNotificationChange('playback')}
+              trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
+              thumbColor={COLORS.TEXT.DARK}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
+            Redes Sociais
+          </Text>
+          <View style={styles.socialButtonsContainer}>
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.FACEBOOK)}
+            >
+              <Ionicons name="logo-facebook" size={32} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.INSTAGRAM)}
+            >
+              <Ionicons name="logo-instagram" size={32} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.YOUTUBE)}
+            >
+              <Ionicons name="logo-youtube" size={32} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => handleSocialMediaPress(RADIO_CONFIG.SOCIAL_MEDIA.FLICKR)}
+            >
+              <Ionicons name="logo-flickr" size={32} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
+            Suporte
+          </Text>
+          <Text style={[styles.supportText, { color: COLORS.TEXT.DARK }]}>
+            Em caso de problemas com o aplicativo, entre em contato com nosso suporte técnico:
           </Text>
           <TouchableOpacity
-            style={styles.phoneButton}
+            style={[styles.button, { backgroundColor: COLORS.PRIMARY }]}
+            onPress={() => Linking.openURL('mailto:rodrigo.cpd@camarasete.mg.gov.br?subject=Suporte%20Técnico%20-%20App%20Rádio%20Câmara&body=Olá,%20gostaria%20de%20reportar%20um%20problema%20com%20o%20aplicativo:')}
+          >
+            <Ionicons name="mail" size={24} color="white" />
+            <Text style={[styles.buttonText, { color: 'white' }]}>Suporte Técnico</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.supportText, { color: COLORS.TEXT.DARK, marginTop: 24 }]}>
+            Em caso de problemas com a transmissão da rádio:
+          </Text>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: COLORS.PRIMARY }]}
             onPress={() => handleSocialMediaPress('https://wa.me/5531986340773')}
           >
-            <Ionicons name="call" size={20} color={COLORS.PRIMARY} />
-            <Text style={[styles.phoneText, { color: COLORS.TEXT.DARK }]}>
-              31 98634-0773
-            </Text>
+            <Ionicons name="logo-whatsapp" size={24} color="white" />
+            <Text style={[styles.buttonText, { color: 'white' }]}>Contato da Rádio</Text>
           </TouchableOpacity>
-          <Text style={[styles.infoText, { color: COLORS.TEXT.DARK }]}>
-            De segunda a sexta-feira, das 8 às 17 horas.
-          </Text>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: COLORS.TEXT.DARK }]}>
-          Sobre o App
+      <View style={styles.versionContainer}>
+        <Text style={[styles.versionText, { color: COLORS.TEXT.DARK }]}>
+          Versão {Constants.expoConfig?.version || '1.0.0'}
         </Text>
-        <View style={styles.settingItem}>
-          <View style={styles.settingTextContainer}>
-            <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
-              Versão
-            </Text>
-            <Text style={[styles.settingDescription, { color: COLORS.TEXT.DARK }]}>
-              {Constants.expoConfig?.version || '1.0.0'}
-            </Text>
-          </View>
-        </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.BACKGROUND,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+    paddingTop: 80,
   },
   section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.SECONDARY,
+    marginBottom: 32,
   },
   sectionTitle: {
     fontSize: 18,
@@ -231,75 +228,70 @@ const styles = StyleSheet.create({
   },
   settingItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   settingTextContainer: {
     flex: 1,
-    marginRight: 16,
   },
   settingText: {
     fontSize: 16,
   },
-  settingDescription: {
-    fontSize: 12,
-    marginTop: 4,
-    opacity: 0.7,
+  socialButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+    paddingHorizontal: 8,
   },
   socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
+    padding: 16,
+    borderRadius: 12,
     backgroundColor: COLORS.BACKGROUND,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  socialText: {
-    marginLeft: 12,
-    fontSize: 16,
+    elevation: 4,
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 8,
-  },
-  buttonText: {
-    marginLeft: 12,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  infoCard: {
-    padding: 16,
-    borderRadius: 8,
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 12,
   },
-  infoTitle: {
+  buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
   },
-  infoText: {
-    fontSize: 14,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
   phoneButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.BACKGROUND,
+    elevation: 2,
   },
   phoneText: {
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  versionContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  versionText: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  supportText: {
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: 'center',
   },
 }); 

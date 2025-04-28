@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { AudioWave } from './AudioWave';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -60,6 +61,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   const descriptionOpacity = useRef(new Animated.Value(0)).current;
   const descriptionTranslateY = useRef(new Animated.Value(20)).current;
 
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
   /** 
    * Efeito que controla a animação do indicador "AO VIVO"
    * Ativa quando está tocando e para quando está pausado
@@ -101,6 +104,16 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   }, [isPlaying]);
 
   /** 
+   * Efeito que controla as notificações
+   * Atualiza a notificação quando o estado de reprodução muda
+   */
+  useEffect(() => {
+    if (notificationsEnabled) {
+      updateNotification();
+    }
+  }, [isPlaying, notificationsEnabled]);
+
+  /** 
    * Efeito de inicialização do player
    * Configura o áudio, notificações e listeners de estado do app
    */
@@ -129,42 +142,121 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     };
   }, []);
 
+  useEffect(() => {
+    loadNotificationSettings();
+  }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await AsyncStorage.getItem('notificationSettings');
+      if (settings) {
+        const parsedSettings = JSON.parse(settings);
+        setNotificationsEnabled(parsedSettings.playback);
+      }
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  };
+
   /** 
    * Configura o canal de notificações no Android
    * Permite controle de reprodução pela notificação
    */
   const setupNotifications = async () => {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('radio-playback', {
-        name: 'Radio Playback',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0],
-        lightColor: '#FF231F7C',
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-        bypassDnd: true,
-        sound: null,
-        enableLights: true,
-        enableVibrate: false,
-      });
-    }
+    try {
+      // Solicita permissão para notificações
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
 
-    await Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-        priority: Notifications.AndroidNotificationPriority.MAX,
-        sticky: true,
-        vibrate: false,
+      if (finalStatus !== 'granted') {
+        console.log('Permissão para notificações não concedida');
+        return;
+      }
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('radio-playback', {
+          name: 'Radio Playback',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0],
+          lightColor: '#FF231F7C',
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: true,
+          sound: null,
+          enableLights: true,
+          enableVibrate: false,
+        });
+      }
+
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          sticky: true,
+          vibrate: false,
+          android: {
+            channelId: 'radio-playback',
+            priority: 'max',
+            sticky: true,
+            icon: './assets/images/notification-icon.png',
+            color: '#FF231F7C',
+          },
+        }),
+      });
+    } catch (error) {
+      console.error('Erro ao configurar notificações:', error);
+    }
+  };
+
+  /** 
+   * Atualiza a notificação de acordo com o estado atual
+   */
+  const updateNotification = async () => {
+    try {
+      // Remove todas as notificações existentes
+      await Notifications.dismissAllNotificationsAsync();
+
+      const notificationContent = {
+        title: 'Rádio Câmara Sete Lagoas',
+        body: isPlaying ? 'Tocando agora' : 'Pausado',
+        sound: false,
+        data: { url: currentStation.streamUrl },
         android: {
           channelId: 'radio-playback',
           priority: 'max',
           sticky: true,
           icon: './assets/images/notification-icon.png',
           color: '#FF231F7C',
+          actions: [
+            {
+              title: isPlaying ? 'Pausar' : 'Tocar',
+              pressAction: {
+                id: 'TOGGLE_PLAYBACK',
+              },
+            },
+            {
+              title: 'Fechar',
+              pressAction: {
+                id: 'STOP',
+              },
+            },
+          ],
         },
-      }),
-    });
+      };
+
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar notificação:', error);
+    }
   };
 
   /** 
@@ -173,38 +265,11 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    */
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      if (isPlaying) {
-        await showNotification();
+      if (isPlaying && notificationsEnabled) {
+        await updateNotification();
       }
     }
     appState.current = nextAppState;
-  };
-
-  /** 
-   * Exibe/atualiza a notificação de reprodução
-   * Mostra controles e status atual (tocando/pausado)
-   */
-  const showNotification = async () => {
-    await Notifications.dismissAllNotificationsAsync();
-
-    const notificationContent = {
-      title: 'Rádio Câmara Sete Lagoas',
-      body: isPlaying ? 'Pausado' : 'Tocando agora',
-      sound: false,
-      data: { url: currentStation.streamUrl },
-      android: {
-        channelId: 'radio-playback',
-        priority: 'max',
-        sticky: true,
-        icon: './assets/images/notification-icon.png',
-        color: '#FF231F7C',
-      },
-    };
-
-    await Notifications.scheduleNotificationAsync({
-      content: notificationContent,
-      trigger: null,
-    });
   };
 
   /** 
@@ -254,10 +319,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     try {
       if (isPlaying) {
         await soundRef.current.pauseAsync();
-        await showNotification();
       } else {
         await soundRef.current.playAsync();
-        await showNotification();
       }
     } catch (error) {
       console.error('Error toggling playback:', error);
