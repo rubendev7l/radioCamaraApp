@@ -12,6 +12,9 @@ import {
   Alert,
   Animated,
   useWindowDimensions,
+  BackHandler,
+  NativeModules,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -344,13 +347,52 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   };
 
   /** 
+   * Limpa recursos e fecha o app
+   * Para a reprodução e remove notificações
+   */
+  const handleExit = async () => {
+    try {
+      // Para a reprodução e libera recursos
+      if (soundRef.current) {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
+      // Remove todas as notificações
+      await Notifications.dismissAllNotificationsAsync();
+
+      // Libera recursos de áudio
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+      });
+
+      // Força o fechamento do app
+      if (Platform.OS === 'android') {
+        BackHandler.exitApp();
+      } else {
+        onExit();
+      }
+    } catch (error) {
+      console.error('Erro ao fechar o app:', error);
+      // Tenta fechar mesmo se houver erro
+      if (Platform.OS === 'android') {
+        BackHandler.exitApp();
+      } else {
+        onExit();
+      }
+    }
+  };
+
+  /** 
    * Gerencia o processo de saída do app
    * Confirma com o usuário antes de fechar
    */
   const handleClosePress = () => {
     Alert.alert(
       'Sair do aplicativo',
-      'Deseja realmente sair?',
+      'Deseja realmente sair? O app será fechado completamente.',
       [
         {
           text: 'Cancelar',
@@ -365,19 +407,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       ],
       { cancelable: true }
     );
-  };
-
-  /** 
-   * Limpa recursos e fecha o app
-   * Para a reprodução e remove notificações
-   */
-  const handleExit = async () => {
-    if (soundRef.current) {
-      await soundRef.current.stopAsync();
-      await soundRef.current.unloadAsync();
-    }
-    await Notifications.dismissAllNotificationsAsync();
-    onExit();
   };
 
   /** 
