@@ -31,4 +31,5 @@ const responsiveBackground = `
 body {
   background-color: #fff;
 }
+`;
 
