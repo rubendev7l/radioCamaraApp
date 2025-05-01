@@ -27,6 +27,7 @@ export default function HomeScreen() {
       <View style={styles.contentContainer}>
         <RadioPlayer 
           currentStation={{
+            id: 'radio-camara-sete-lagoas',
             name: RADIO_CONFIG.STATION_NAME,
             streamUrl: RADIO_CONFIG.STREAM_URL,
             description: RADIO_CONFIG.STATION_DESCRIPTION,
