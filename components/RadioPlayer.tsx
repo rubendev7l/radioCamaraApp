@@ -15,6 +15,7 @@ import {
   BackHandler,
   NativeModules,
   DeviceEventEmitter,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -162,58 +163,39 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   };
 
   /** 
-   * Configura o canal de notificações no Android
-   * Permite controle de reprodução pela notificação
+   * Configura o player de áudio
+   * Habilita reprodução em background e monitora status
    */
-  const setupNotifications = async () => {
+  const setupAudio = async () => {
     try {
-      // Solicita permissão para notificações
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+      });
 
-      if (finalStatus !== 'granted') {
-        console.log('Permissão para notificações não concedida');
-        return;
-      }
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: currentStation.streamUrl },
+        { shouldPlay: false }
+      );
+      soundRef.current = sound;
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded) {
+          setIsPlaying(status.isPlaying);
+          setHasError(false);
+        } else {
+          setHasError(true);
+        }
+      });
 
       if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('radio-playback', {
-          name: 'Radio Playback',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0],
-          lightColor: '#FF231F7C',
-          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-          bypassDnd: true,
-          sound: null,
-          enableLights: true,
-          enableVibrate: false,
-        });
+        await sound.setVolumeAsync(1.0);
+        await sound.setIsMutedAsync(false);
+        await sound.setProgressUpdateIntervalAsync(100);
       }
-
-      await Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-          priority: Notifications.AndroidNotificationPriority.MAX,
-          sticky: true,
-          vibrate: false,
-          android: {
-            channelId: 'radio-playback',
-            priority: 'max',
-            sticky: true,
-            icon: './assets/images/notification-icon.png',
-            color: '#FF231F7C',
-          },
-        }),
-      });
     } catch (error) {
-      console.error('Erro ao configurar notificações:', error);
+      console.error('Error setting up audio:', error);
+      setHasError(true);
     }
   };
 
@@ -273,43 +255,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       }
     }
     appState.current = nextAppState;
-  };
-
-  /** 
-   * Configura o player de áudio
-   * Habilita reprodução em background e monitora status
-   */
-  const setupAudio = async () => {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: currentStation.streamUrl },
-        { shouldPlay: false }
-      );
-      soundRef.current = sound;
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          setIsPlaying(status.isPlaying);
-      setHasError(false);
-        } else {
-      setHasError(true);
-        }
-      });
-
-      if (Platform.OS === 'android') {
-        await sound.setVolumeAsync(1.0);
-        await sound.setIsMutedAsync(false);
-        await sound.setProgressUpdateIntervalAsync(100);
-      }
-        } catch (error) {
-      console.error('Error setting up audio:', error);
-      setHasError(true);
-    }
   };
 
   /** 
@@ -449,6 +394,75 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   }, []);
 
   /** 
+   * Configura o canal de notificações no Android
+   * Permite controle de reprodução pela notificação
+   */
+  const setupNotifications = async () => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.log('Permissão para notificações não concedida');
+      return;
+    }
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('radio-playback', {
+          name: 'Radio Playback',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0],
+          lightColor: '#FF231F7C',
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: true,
+          sound: null,
+          enableLights: true,
+          enableVibrate: false,
+        });
+      }
+
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          sticky: true,
+          vibrate: false,
+          android: {
+            channelId: 'radio-playback',
+            priority: 'max',
+            sticky: true,
+            icon: './assets/images/notification-icon.png',
+            color: '#FF231F7C',
+          },
+        }),
+      });
+    } catch (error) {
+      console.error('Erro ao configurar notificações:', error);
+    }
+  };
+
+  /** 
+   * Compartilha o status atual da rádio
+   */
+  const handleShare = async () => {
+    try {
+      const result = await Share.share({
+        message: `🎧 Ouvindo Rádio Câmara Sete Lagoas\n${currentStation.description || 'A voz do legislativo de Sete Lagoas'}\n\nOuça também: https://www.camarasete.mg.gov.br/comunicacao/radio-camara`,
+        url: 'https://www.camarasete.mg.gov.br/comunicacao/radio-camara'
+      });
+    } catch (error) {
+      console.error('Erro ao compartilhar:', error);
+    }
+  };
+
+  /** 
    * Renderiza o player de rádio com layout responsivo
    * Adapta-se para web e mobile com diferentes tamanhos
    */
@@ -572,6 +586,27 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               />
             </TouchableOpacity>
 
+            {/** Botão de compartilhar com tamanho adaptativo */}
+              <TouchableOpacity
+              style={[
+                styles.controlButton,
+                isWeb && {
+                  width: Math.min(width * 0.15, 80),
+                  height: Math.min(width * 0.15, 80),
+                  borderRadius: Math.min(width * 0.075, 40),
+                }
+              ]}
+              onPress={handleShare}
+              accessibilityLabel="Compartilhar"
+                accessibilityRole="button"
+              >
+                <Ionicons 
+                name="share-social" 
+                size={isWeb ? Math.min(width * 0.04, 32) : 24}
+                  color="white" 
+                />
+              </TouchableOpacity>
+
             {/** Botão de fechar com tamanho adaptativo */}
             <TouchableOpacity
               style={[
@@ -588,7 +623,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             >
               <Ionicons 
                 name="close" 
-                size={isWeb ? Math.min(width * 0.04, 32) : 24} 
+                size={isWeb ? Math.min(width * 0.04, 32) : 24}
                 color="white" 
               />
             </TouchableOpacity>
@@ -823,5 +858,14 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+  },
+  offlineMessage: {
+    color: '#FFD700',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+    borderRadius: 4,
   },
 }); 

@@ -20,12 +20,18 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.camarasete.radio",
+      "bundleIdentifier": "com.cm7.radiocamara",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio"
+          "audio",
+          "fetch",
+          "remote-notification"
         ],
-        "NSMicrophoneUsageDescription": "Este app não requer acesso ao microfone"
+        "NSMicrophoneUsageDescription": "Este app não requer acesso ao microfone",
+        "UIRequiresPersistentWiFi": true,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
@@ -34,7 +40,7 @@
         "backgroundColor": "#FFFFFF",
         "backgroundImage": "./assets/images/icon-background.png"
       },
-      "package": "com.camarasete.radio",
+      "package": "com.cm7.radiocamara",
       "versionCode": 1,
       "permissions": [
         "FOREGROUND_SERVICE",
@@ -43,8 +49,9 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "RECEIVE_BOOT_COMPLETED",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK"
       ]
     },
     "web": {

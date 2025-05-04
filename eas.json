@@ -8,14 +8,15 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "gradleCommand": ":app:assembleDebug",
-        "buildType": "apk"
+        "gradleCommand": ":app:bundleDebug",
+        "buildType": "app-bundle"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
       }
     },
     "production": {
