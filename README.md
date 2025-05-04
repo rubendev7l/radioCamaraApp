@@ -1,22 +1,13 @@
 # Rádio Câmara Sete Lagoas
 
-Aplicativo oficial da Rádio Câmara Sete Lagoas, desenvolvido para proporcionar acesso fácil e rápido às transmissões ao vivo da Câmara Municipal, além de oferecer uma plataforma de interação com os ouvintes.
-
-## 🛠️ Desenvolvimento
-
-Este projeto foi desenvolvido utilizando o [Cursor](https://cursor.sh/), um editor de código moderno com integração de IA, que proporcionou uma experiência de desenvolvimento mais eficiente e produtiva. A IA assistente foi fundamental para:
-
-- Implementação de funcionalidades complexas
-- Revisão e otimização de código
-- Sugestões de melhores práticas
-- Resolução de problemas técnicos
-- Documentação do projeto
+Aplicativo oficial da Rádio Câmara Sete Lagoas, desenvolvido para proporcionar acesso fácil e rápido às transmissões ao vivo da Câmara Municipal.
 
 ## 🚀 Funcionalidades
 
 - **Transmissão Ao Vivo**: Acompanhe as sessões legislativas em tempo real
 - **Controle de Áudio**: Play/Pause e controle de volume
-- **Notificações**: Receba alertas sobre sessões e programas especiais
+- **Notificações**: Receba alertas sobre status da rádio
+- **Controles na Tela de Bloqueio**: Controle a reprodução sem abrir o app
 - **Interação**: Envie mensagens e solicite músicas via WhatsApp
 - **Acessibilidade**: Interface adaptativa para modo claro/escuro
 - **Suporte Técnico**: Canal direto para reportar problemas
@@ -26,7 +17,7 @@ Este projeto foi desenvolvido utilizando o [Cursor](https://cursor.sh/), um edit
 - **Expo**: Framework para desenvolvimento mobile
 - **React Native**: Biblioteca para construção de interfaces
 - **TypeScript**: Linguagem para tipagem estática
-- **Expo AV**: Para streaming de áudio
+- **Expo AV**: Para streaming e controles de mídia
 - **React Navigation**: Para navegação entre telas
 - **React Native Reanimated**: Para animações
 
@@ -36,6 +27,7 @@ Este projeto foi desenvolvido utilizando o [Cursor](https://cursor.sh/), um edit
    - Node.js (versão 14 ou superior)
    - npm ou yarn
    - Expo CLI
+   - Android Studio (para build nativo)
 
 2. **Instalação**
    ```bash
@@ -50,7 +42,7 @@ Este projeto foi desenvolvido utilizando o [Cursor](https://cursor.sh/), um edit
 
 3. **Executando o Projeto**
    ```bash
-   # Inicie o servidor de desenvolvimento
+   # Inicie o app
    npx expo start
    ```
 
@@ -63,25 +55,54 @@ radio-camara-app/
 ├── components/         # Componentes reutilizáveis
 ├── constants/          # Constantes e configurações
 ├── context/           # Contextos do React
-├── hooks/             # Hooks personalizados
 └── utils/             # Funções utilitárias
 ```
 
-## 🔧 Configuração para Build
+## 📚 Documentação
 
-1. **Configuração do EAS**
-   - Atualize o `eas.json` com suas configurações
-   - Configure a conta de serviço do Google Play
+Para informações técnicas detalhadas, consulte o arquivo [DOCUMENTACAO.md](./DOCUMENTACAO.md) que contém:
 
-2. **Build de Produção**
-   ```bash
-   eas build --platform android --profile production
-   ```
+- Versões das dependências
+- Configurações técnicas
+- Processos de build
+- Configurações de áudio
+- Configurações de notificações
+- Otimizações de performance
+- Limitações conhecidas
+- E muito mais!
 
-3. **Submissão para Play Store**
-   ```bash
-   eas submit --platform android
-   ```
+## ⚠️ Importante
+
+NUNCA altere estes elementos, pois podem causar conflitos sérios:
+
+1. **Package Name** (`com.cm7.radiocamara`):
+   - É o identificador único do app
+   - Se mudar, será considerado um app novo
+   - Perderá todas as avaliações e downloads
+
+2. **Chave de Assinatura** (Keystore):
+   - A chave que o EAS gerou
+   - Se perder, não poderá mais atualizar o app
+   - Guarde o `credentials.json` gerado pelo EAS
+
+3. **Version Code** (no `app.json`):
+   - Sempre deve ser maior que o anterior
+   - Nunca deve ser menor
+   - Nunca deve repetir
+
+## 📞 Suporte
+
+Para suporte técnico, entre em contato:
+- E-mail: rodrigo.cpd@camarasete.mg.gov.br
+- WhatsApp: (31) 98634-0773 (Rádio)
+- Horário: Segunda a Sexta, 8h às 17h
+
+## 📱 Links Úteis
+
+- [Site Oficial da Câmara](https://www.camarasete.mg.gov.br)
+- [Play Store](link-para-play-store)
+- [Documentação Expo](https://docs.expo.dev)
+- [Documentação Expo AV](https://docs.expo.dev/versions/latest/sdk/audio/)
 
 ## 📝 Licença
 
@@ -89,16 +110,4 @@ Este projeto está sob a licença [MIT](LICENSE).
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Por favor, leia as diretrizes de contribuição antes de enviar um pull request.
-
-## 📞 Suporte
-
-Para suporte técnico, entre em contato:
-- E-mail: rodrigo.cpd@camarasete.mg.gov.br
-- WhatsApp: (31) 98634-0773
-
-## 📱 Links Úteis
-
-- [Site Oficial da Câmara](https://www.camarasete.mg.gov.br)
-- [Play Store](link-para-play-store)
-- [Documentação Expo](https://docs.expo.dev) 
+Contribuições são bem-vindas! Por favor, leia as diretrizes de contribuição antes de enviar um pull request. 
