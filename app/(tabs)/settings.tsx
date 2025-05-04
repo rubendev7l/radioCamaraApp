@@ -18,8 +18,8 @@ interface NotificationSettings {
 export default function SettingsScreen() {
   const [notificationSettings, setNotificationSettings] = React.useState<NotificationSettings>({
     general: true,
-    sessions: true,
-    specialPrograms: true,
+    sessions: false,
+    specialPrograms: false,
     maintenance: true,
     playback: true,
   });
@@ -40,10 +40,32 @@ export default function SettingsScreen() {
   };
 
   const handleNotificationChange = async (type: keyof NotificationSettings) => {
-    const newSettings = {
-      ...notificationSettings,
-      [type]: !notificationSettings[type]
-    };
+    let newSettings: NotificationSettings;
+    
+    if (type === 'general') {
+      // Se estiver ativando notificações gerais, ativa todas as outras disponíveis
+      newSettings = {
+        ...notificationSettings,
+        general: !notificationSettings.general,
+        maintenance: !notificationSettings.general,
+        playback: !notificationSettings.general,
+      };
+    } else {
+      // Se estiver desativando uma notificação específica, desativa também a geral
+      newSettings = {
+        ...notificationSettings,
+        [type]: !notificationSettings[type],
+        general: false,
+      };
+
+      // Se todas as notificações disponíveis estiverem ativas, ativa a geral
+      if (type === 'maintenance' && !notificationSettings[type] && notificationSettings.playback) {
+        newSettings.general = true;
+      } else if (type === 'playback' && !notificationSettings[type] && notificationSettings.maintenance) {
+        newSettings.general = true;
+      }
+    }
+    
     setNotificationSettings(newSettings);
     
     try {
@@ -82,29 +104,35 @@ export default function SettingsScreen() {
             />
           </View>
 
-          <View style={styles.settingItem}>
+          <View style={[styles.settingItem, styles.disabledSetting]}>
             <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK, opacity: 0.5 }]}>
                 Sessões da Câmara
+              </Text>
+              <Text style={[styles.disabledText, { color: COLORS.TEXT.DARK }]}>
+                (Em breve)
               </Text>
             </View>
             <Switch
-              value={notificationSettings.sessions}
-              onValueChange={() => handleNotificationChange('sessions')}
+              value={false}
+              disabled={true}
               trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
               thumbColor={COLORS.TEXT.DARK}
             />
           </View>
 
-          <View style={styles.settingItem}>
+          <View style={[styles.settingItem, styles.disabledSetting]}>
             <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK }]}>
+              <Text style={[styles.settingText, { color: COLORS.TEXT.DARK, opacity: 0.5 }]}>
                 Programas Especiais
+              </Text>
+              <Text style={[styles.disabledText, { color: COLORS.TEXT.DARK }]}>
+                (Em breve)
               </Text>
             </View>
             <Switch
-              value={notificationSettings.specialPrograms}
-              onValueChange={() => handleNotificationChange('specialPrograms')}
+              value={false}
+              disabled={true}
               trackColor={{ false: COLORS.SECONDARY, true: COLORS.PRIMARY }}
               thumbColor={COLORS.TEXT.DARK}
             />
@@ -293,5 +321,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  disabledSetting: {
+    opacity: 0.7,
+  },
+  disabledText: {
+    fontSize: 12,
+    marginTop: 2,
   },
 }); 

@@ -81,7 +81,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               useNativeDriver: true,
             }),
             Animated.timing(liveDotOpacity, {
-              toValue: 0.5,
+              toValue: 0.7,
               duration: 1000,
               useNativeDriver: true,
             }),
@@ -494,7 +494,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               }
             ]}
           >
-            {currentStation.description}
+            A voz do legislativo de Sete Lagoas
           </Animated.Text>
 
           {/** Logo da rádio com tamanho responsivo */}
@@ -573,7 +573,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             </TouchableOpacity>
 
             {/** Botão de fechar com tamanho adaptativo */}
-              <TouchableOpacity
+            <TouchableOpacity
               style={[
                 styles.controlButton,
                 isWeb && {
@@ -604,7 +604,15 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             <View style={styles.statusContainer}>
               {isPlaying ? (
                 <View style={styles.liveContainer}>
-                  <View style={styles.liveDot} />
+                  <Animated.View 
+                    style={[
+                      styles.liveDot,
+                      {
+                        transform: [{ scale: liveDotScale }],
+                        opacity: liveDotOpacity,
+                      }
+                    ]} 
+                  />
                   <Text style={styles.liveText}>AO VIVO</Text>
                 </View>
               ) : (
@@ -752,7 +760,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#FF0000',
-    marginRight: 15,
+    marginRight: 8,
   },
   /** Texto do indicador "AO VIVO" */
   liveText: {
@@ -796,5 +804,24 @@ const styles = StyleSheet.create({
     opacity: 0.95,
     marginTop: 20,
     fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  descriptionContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  descriptionText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
 }); 
