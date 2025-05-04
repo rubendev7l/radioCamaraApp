@@ -49,7 +49,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   const [isMuted, setIsMuted] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState as AppStateStatus);
-  
+
   /** 
    * Animação do indicador "AO VIVO"
    * Controla a escala e opacidade do ponto vermelho
@@ -295,9 +295,9 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded) {
           setIsPlaying(status.isPlaying);
-          setHasError(false);
+      setHasError(false);
         } else {
-          setHasError(true);
+      setHasError(true);
         }
       });
 
@@ -306,7 +306,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         await sound.setIsMutedAsync(false);
         await sound.setProgressUpdateIntervalAsync(100);
       }
-    } catch (error) {
+        } catch (error) {
       console.error('Error setting up audio:', error);
       setHasError(true);
     }
@@ -364,8 +364,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
       // Libera recursos de áudio
       await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: false,
-        staysActiveInBackground: false,
+          playsInSilentModeIOS: false,
+          staysActiveInBackground: false,
       });
 
       // Força o fechamento do app
@@ -520,7 +520,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
           ]}>
             <AudioWave isPlaying={isPlaying} />
           </View>
-          
+        
           {/** Controles de reprodução com layout responsivo */}
           <View style={[
             styles.controls,
@@ -544,7 +544,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               accessibilityLabel={isMuted ? "Ativar som" : "Desativar som"}
               accessibilityRole="button"
             >
-              <Ionicons
+              <Ionicons 
                 name={isMuted ? "volume-mute" : "volume-high"} 
                 size={isWeb ? Math.min(width * 0.04, 32) : 24}
                 color="white" 
@@ -565,7 +565,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               accessibilityLabel={isPlaying ? "Pausar" : "Tocar"}
               accessibilityRole="button"
             >
-              <Ionicons
+              <Ionicons 
                 name={isPlaying ? "pause" : "play"} 
                 size={isWeb ? Math.min(width * 0.06, 48) : 32}
                 color="white" 
@@ -573,7 +573,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             </TouchableOpacity>
 
             {/** Botão de fechar com tamanho adaptativo */}
-            <TouchableOpacity
+              <TouchableOpacity
               style={[
                 styles.controlButton,
                 isWeb && {
