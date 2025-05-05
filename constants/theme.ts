@@ -1,24 +1,24 @@
-export const COLORS = {
-  light: {
-    background: '#121212',
-    text: '#FFFFFF',
-    primary: '#FFFFFF',
-    secondary: '#FFFFFF',
-    accent: '#FFFFFF',
-    error: '#FF3B30',
-    success: '#34C759',
-    warning: '#FF9500',
-    info: '#007AFF',
-  },
+export const theme = {
   dark: {
-    background: '#121212',
+    primary: '#007AFF',
+    background: '#000000',
+    card: '#1C1C1E',
     text: '#FFFFFF',
-    primary: '#FFFFFF',
-    secondary: '#FFFFFF',
-    accent: '#FFFFFF',
-    error: '#FF453A',
-    success: '#32D74B',
-    warning: '#FF9F0A',
-    info: '#0A84FF',
+    border: '#38383A',
+    notification: '#FF3B30',
+    warning: '#FF9500',
+    error: '#FF3B30',
+    success: '#34C759'
   },
-} as const; 
+  light: {
+    primary: '#007AFF',
+    background: '#FFFFFF',
+    card: '#F2F2F7',
+    text: '#000000',
+    border: '#C6C6C8',
+    notification: '#FF3B30',
+    warning: '#FF9500',
+    error: '#FF3B30',
+    success: '#34C759'
+  }
+}; 

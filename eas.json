@@ -23,8 +23,13 @@
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease"
-      }
+        "gradleCommand": ":app:bundleRelease",
+        "gradleProperties": {
+          "android.enableR8": true
+        }
+      },
+      "channel": "production",
+      "runtimeVersion": "52.0.0"
     },
     "development-simulator": {
       "developmentClient": true,

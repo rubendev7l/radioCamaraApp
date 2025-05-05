@@ -13,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/bc1a10e4-534b-4c0f-94a8-c4928955237e",
+      "checkAutomatically": "ON_LOAD"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -41,7 +44,7 @@
         "backgroundImage": "./assets/images/icon-background.png"
       },
       "package": "com.cm7.radiocamara",
-      "versionCode": 1,
+      "versionCode": 4,
       "permissions": [
         "FOREGROUND_SERVICE",
         "WAKE_LOCK",
@@ -50,10 +53,7 @@
         "ACCESS_NETWORK_STATE",
         "RECEIVE_BOOT_COMPLETED",
         "POST_NOTIFICATIONS"
-      ],
-      "enableProguardInReleaseBuilds": true,
-      "enableShrinkResources": true,
-      "enableR8": true
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

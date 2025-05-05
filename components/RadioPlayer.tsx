@@ -16,6 +16,7 @@ import {
   NativeModules,
   DeviceEventEmitter,
   Share,
+  UIManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -207,38 +208,41 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       // Remove todas as notificações existentes
       await Notifications.dismissAllNotificationsAsync();
 
-      const notificationContent = {
-        title: 'Rádio Câmara Sete Lagoas',
-        body: isPlaying ? 'Tocando agora' : 'Pausado',
-        sound: false,
-        data: { url: currentStation.streamUrl },
-        android: {
-          channelId: 'radio-playback',
-          priority: 'max',
-          sticky: true,
-          icon: './assets/images/notification-icon.png',
-          color: '#FF231F7C',
-          actions: [
-            {
-              title: isPlaying ? 'Pausar' : 'Tocar',
-              pressAction: {
-                id: 'TOGGLE_PLAYBACK',
+      // Só mostra notificação se não houver erro ou se estiver pausado
+      if (!hasError || !isPlaying) {
+        const notificationContent = {
+          title: 'Rádio Câmara Sete Lagoas',
+          body: hasError ? 'Transmissão fora do ar' : (isPlaying ? 'Tocando agora' : 'Pausado'),
+          sound: false,
+          data: { url: currentStation.streamUrl },
+          android: {
+            channelId: 'radio-playback',
+            priority: 'max',
+            sticky: true,
+            icon: './assets/images/notification-icon.png',
+            color: '#FF231F7C',
+            actions: [
+              {
+                title: hasError ? 'Tentar novamente' : (isPlaying ? 'Pausar' : 'Tocar'),
+                pressAction: {
+                  id: 'TOGGLE_PLAYBACK',
+                },
               },
-            },
-            {
-              title: 'Fechar',
-              pressAction: {
-                id: 'STOP',
+              {
+                title: 'Fechar',
+                pressAction: {
+                  id: 'STOP',
+                },
               },
-            },
-          ],
-        },
-      };
+            ],
+          },
+        };
 
-      await Notifications.scheduleNotificationAsync({
-        content: notificationContent,
-        trigger: null,
-      });
+        await Notifications.scheduleNotificationAsync({
+          content: notificationContent,
+          trigger: null,
+        });
+      }
     } catch (error) {
       console.error('Erro ao atualizar notificação:', error);
     }
@@ -306,16 +310,31 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
       // Remove todas as notificações
       await Notifications.dismissAllNotificationsAsync();
+      await Notifications.cancelAllScheduledNotificationsAsync();
 
       // Libera recursos de áudio
       await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: false,
-          staysActiveInBackground: false,
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: false,
+        interruptionModeAndroid: 1,
+        interruptionModeIOS: 1,
       });
+
+      // Limpa o canal de notificações no Android
+      if (Platform.OS === 'android') {
+        await Notifications.deleteNotificationChannelAsync('radio-playback');
+      }
 
       // Força o fechamento do app
       if (Platform.OS === 'android') {
+        // Força o fechamento imediato
         BackHandler.exitApp();
+        
+        // Se não fechar em 100ms, tenta novamente
+        setTimeout(() => {
+          BackHandler.exitApp();
+        }, 100);
       } else {
         onExit();
       }
