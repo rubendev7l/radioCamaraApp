@@ -1,0 +1,219 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Sua base de regras para o Cursor já está muito sólida — mas ela pode sim ser **refinada** em três pontos principais:
+
+### 🧩 **Resumo das melhorias sugeridas**
+
+1. **Organização por seções mais claras e curtas**
+2. **Atualizações de bibliotecas e práticas recomendadas (ex: i18n, Safe Area, Reanimated 3)**
+3. **Remoção de redundâncias e reforço em práticas que muitas vezes são ignoradas, como acessibilidade e testes em produção**
+
+---
+
+### ✅ **Versão Refinada das Regras para o Cursor**
+
+````md
+## 🧠 Perfil Técnico
+Você é especialista em TypeScript, React Native, Expo (Managed Workflow) e UX para apps móveis.
+
+---
+
+## 📁 Estrutura de Projeto
+
+- Use `kebab-case` para diretórios e arquivos (ex: `components/audio-player`)
+- Estrutura de arquivos: componente principal, subcomponentes, helpers, tipos, conteúdo estático
+- Prefira `named exports` para reutilização
+
+---
+
+## ⚙️ Configuração e Build
+
+- Sempre seguir a [documentação oficial do Expo](https://docs.expo.dev/)
+- Utilize `babel-preset-expo` com Expo SDK 50 ou superior
+- Mantenha `app.json`, `eas.json`, `tsconfig.json` limpos e atualizados
+
+---
+
+## 🧾 TypeScript
+
+- Sempre usar TypeScript com `strict: true`
+- Prefira `interface` a `type` para objetos e props
+- Evite `enum`; use objetos com chave/valor
+- Tipagem explícita para retornos de função
+
+---
+
+## 🧩 Código e Sintaxe
+
+- Use `function` keyword para funções puras
+- Use nomes descritivos: `isPlaying`, `hasError`, `getUser`
+- Evite `else` e blocos aninhados desnecessários
+- Use JSX declarativo e limpo
+
+---
+
+## 🎨 UI e Estilo
+
+- Use `Expo` e `react-native` nativos sempre que possível
+- Prefira `styled-components` ou `tailwind-rn`
+- Use `useColorScheme()` para dark mode, mas evite hardcoding
+- Respeite princípios de Acessibilidade (`accessibilityRole`, `label`, etc.)
+
+---
+
+## 📱 Safe Area
+
+- Use `SafeAreaProvider` no nível raiz
+- Use `SafeAreaView` ou `SafeAreaScrollView` para conteúdo
+- Evite margens/paddings manuais em áreas críticas
+
+---
+
+## 🚀 Performance
+
+- Reduza `useEffect` e `useState` — use Context + Reducer se possível
+- Use `lazy()`, `Suspense`, `useMemo`, `useCallback` estrategicamente
+- Use `expo-image` para carregamento otimizado de imagens
+- Ative `expo-splash-screen` e `AppLoading` para UX inicial suave
+
+---
+
+## 📡 Audio e Background
+
+- Use `expo-av` com:
+```ts
+Audio.setAudioModeAsync({
+  staysActiveInBackground: true,
+  playsInSilentModeIOS: true,
+  shouldDuckAndroid: true,
+});
+````
+
+* Garanta `UIBackgroundModes: ["audio"]` no `infoPlist` para iOS
+
+---
+
+## 🧭 Navegação
+
+* Use `expo-router` e `react-navigation`
+* Adote rotas dinâmicas e deep linking com `expo-linking`
+* Siga o padrão de `tabs`, `stack`, `drawer` como descrito na [documentação oficial](https://reactnavigation.org/)
+
+---
+
+## 🔐 Segurança
+
+* Use `expo-secure-store` ou `react-native-encrypted-storage`
+* HTTPS obrigatório para APIs
+* Use autenticação segura via tokens + refresh
+* Limpe logs e `console.*` em produção
+
+---
+
+## 🧪 Testes
+
+* Use `Jest` + `Testing Library` para unitários
+* Use `Detox` para testes E2E
+* Use `expo-test-utils` e snapshot testing onde apropriado
+
+---
+
+## 🌐 Internacionalização (i18n)
+
+* Use `expo-localization` e `i18next` com fallback
+* Suporte a RTL e escalonamento de fontes
+* Detectar idioma e salvar preferência do usuário
+
+---
+
+## 🛎️ Notificações
+
+* Use `expo-notifications`
+* Crie canais personalizados no Android
+* Configure corretamente permissões no `app.json`
+
+---
+
+## 🌍 OTA e Atualizações
+
+* Use `expo-updates` com:
+
+```json
+"updates": {
+  "checkAutomatically": "ON_LOAD"
+},
+"runtimeVersion": {
+  "policy": "sdkVersion"
+}
+```
+
+---
+
+## 📊 Monitoramento
+
+* Use `expo-error-reporter`, `Sentry` ou logs para detectar falhas
+* Use `ErrorBoundary` global para interceptar erros inesperados
+
+---
+
+## 📤 Publicação
+
+* Use `eas build` com perfis `production`, `preview` e `development`
+* Use `expo-constants` para env vars
+* Publique OTA com `eas update`
+
+# 🌍 Idioma
+
+Sempre responda em **português (pt-BR)**, independentemente do idioma da pergunta ou do código-fonte. Mantenha clareza, precisão técnica e termos consistentes com a documentação oficial do Expo, React Native e TypeScript.
+
+---
+
+Claro! Aqui está uma regra bem explicada, clara e pronta para incluir no seu `cursor.mdc` ou guia técnico do projeto:
+
+---
+
+## 📦 Uso do `npx`: Quando e Por Quê
+
+### ✅ Regra:
+
+> Sempre que utilizar ferramentas CLI (como `expo`, `eas`, `react-native`, `jest`, etc.), prefira executar os comandos precedidos de `npx`.
+> Exemplo:
+>
+> ```bash
+> npx expo start  
+> npx eas build --platform android  
+> ```
+
+---
+
+### 🧠 Por que usar `npx`?
+
+1. **Executa a versão local do projeto** (instalada em `node_modules/.bin`), garantindo compatibilidade com o projeto atual.
+2. **Evita dependência de instalações globais**, o que reduz conflitos entre versões.
+3. **Mais seguro e previsível**, especialmente em times ou projetos com CI/CD.
+4. Permite rodar pacotes de forma transitória, mesmo sem instalação permanente no sistema.
+
+---
+
+### 📌 Quando usar:
+
+| Situação                                             | Usar `npx`?                     |
+| ---------------------------------------------------- | ------------------------------- |
+| Rodar `expo start`, `eas build`, `jest`              | ✅ Sim                           |
+| Rodar CLI de um pacote que está no projeto           | ✅ Sim                           |
+| Rodar algo instalado globalmente só para uso pessoal | ❌ Opcional, mas não recomendado |
+
+---
+
+### 🚫 Evite:
+
+* Usar apenas `expo`, `eas`, `react-native`, etc., sem `npx`, **a menos que você saiba que a versão global é 100% compatível com o projeto**.
+* Rodar ferramentas antigas que exigem `npm install -g`, pois isso pode gerar conflitos futuros.
+
+---
+
+
+
