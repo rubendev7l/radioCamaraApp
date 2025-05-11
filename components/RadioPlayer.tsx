@@ -17,12 +17,15 @@ import {
   DeviceEventEmitter,
   Share,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { AudioWave } from './AudioWave';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -67,6 +70,10 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   const descriptionTranslateY = useRef(new Animated.Value(20)).current;
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [isBuffering, setIsBuffering] = useState(false);
+
+  const { isConnected, isInternetReachable } = useNetworkStatus();
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   /** 
    * Efeito que controla a animação do indicador "AO VIVO"
@@ -74,30 +81,31 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    */
   useEffect(() => {
     if (isPlaying) {
+      const animationConfig = {
+        duration: 1000,
+        useNativeDriver: Platform.OS !== 'web',
+      };
+
       Animated.loop(
         Animated.sequence([
           Animated.parallel([
             Animated.timing(liveDotScale, {
               toValue: 1.2,
-              duration: 1000,
-              useNativeDriver: true,
+              ...animationConfig,
             }),
             Animated.timing(liveDotOpacity, {
               toValue: 0.7,
-              duration: 1000,
-              useNativeDriver: true,
+              ...animationConfig,
             }),
           ]),
           Animated.parallel([
             Animated.timing(liveDotScale, {
               toValue: 1,
-              duration: 1000,
-              useNativeDriver: true,
+              ...animationConfig,
             }),
             Animated.timing(liveDotOpacity, {
               toValue: 1,
-              duration: 1000,
-              useNativeDriver: true,
+              ...animationConfig,
             }),
           ]),
         ])
@@ -184,8 +192,18 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         if (status.isLoaded) {
           setIsPlaying(status.isPlaying);
           setHasError(false);
+
+          // Se está tocando, nunca mostra buffering
+          if (status.isPlaying) {
+            setIsBuffering(false);
+          } else if (status.isBuffering && status.shouldPlay) {
+            setIsBuffering(true);
+          } else {
+            setIsBuffering(false);
+          }
         } else {
           setHasError(true);
+          setIsBuffering(false);
         }
       });
 
@@ -205,6 +223,11 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    */
   const updateNotification = async () => {
     try {
+      // Verifica se está na web
+      if (Platform.OS === 'web') {
+        return; // Não tenta usar notificações na web
+      }
+
       // Remove todas as notificações existentes
       await Notifications.dismissAllNotificationsAsync();
 
@@ -398,16 +421,19 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    * Inicia quando o componente é montado
    */
   useEffect(() => {
+    const animationConfig = {
+      duration: 1000,
+      useNativeDriver: Platform.OS !== 'web',
+    };
+
     Animated.parallel([
       Animated.timing(descriptionOpacity, {
         toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
+        ...animationConfig,
       }),
       Animated.timing(descriptionTranslateY, {
         toValue: 0,
-        duration: 1000,
-        useNativeDriver: true,
+        ...animationConfig,
       }),
     ]).start();
   }, []);
@@ -418,6 +444,11 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    */
   const setupNotifications = async () => {
     try {
+      // Verifica se está na web
+      if (Platform.OS === 'web') {
+        return; // Não tenta configurar notificações na web
+      }
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
@@ -428,8 +459,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
       if (finalStatus !== 'granted') {
         console.log('Permissão para notificações não concedida');
-      return;
-    }
+        return;
+      }
 
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('radio-playback', {
@@ -480,6 +511,14 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       console.error('Erro ao compartilhar:', error);
     }
   };
+
+  // Reconexão automática quando a internet volta
+  useEffect(() => {
+    if (hasError && isConnected && isInternetReachable) {
+      setIsReconnecting(true);
+      handleReload().finally(() => setIsReconnecting(false));
+    }
+  }, [hasError, isConnected, isInternetReachable]);
 
   /** 
    * Renderiza o player de rádio com layout responsivo
@@ -541,6 +580,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
                 marginBottom: 5,
               }
             ]}
+            resizeMode="contain"
           />
           
           {/** Container da onda de áudio com largura responsiva */}
@@ -567,13 +607,20 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             <TouchableOpacity
               style={[
                 styles.controlButton,
+                { minWidth: 44, minHeight: 44 },
                 isWeb && {
                   width: Math.min(width * 0.15, 80),
                   height: Math.min(width * 0.15, 80),
                   borderRadius: Math.min(width * 0.075, 40),
                 }
               ]}
-              onPress={toggleMute}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.selectionAsync();
+                }
+                toggleMute();
+              }}
+              activeOpacity={0.7}
               accessibilityLabel={isMuted ? "Ativar som" : "Desativar som"}
               accessibilityRole="button"
             >
@@ -588,13 +635,20 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             <TouchableOpacity
               style={[
                 styles.playButton,
+                { minWidth: 64, minHeight: 64 },
                 isWeb && {
                   width: Math.min(width * 0.2, 120),
                   height: Math.min(width * 0.2, 120),
                   borderRadius: Math.min(width * 0.1, 60),
                 }
               ]}
-              onPress={togglePlayback}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+                togglePlayback();
+              }}
+              activeOpacity={0.7}
               accessibilityLabel={isPlaying ? "Pausar" : "Tocar"}
               accessibilityRole="button"
             >
@@ -606,42 +660,28 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             </TouchableOpacity>
 
             {/** Botão de compartilhar com tamanho adaptativo */}
-              <TouchableOpacity
-              style={[
-                styles.controlButton,
-                isWeb && {
-                  width: Math.min(width * 0.15, 80),
-                  height: Math.min(width * 0.15, 80),
-                  borderRadius: Math.min(width * 0.075, 40),
-                }
-              ]}
-              onPress={handleShare}
-              accessibilityLabel="Compartilhar"
-                accessibilityRole="button"
-              >
-                <Ionicons 
-                name="share-social" 
-                size={isWeb ? Math.min(width * 0.04, 32) : 24}
-                  color="white" 
-                />
-              </TouchableOpacity>
-
-            {/** Botão de fechar com tamanho adaptativo */}
             <TouchableOpacity
               style={[
                 styles.controlButton,
+                { minWidth: 44, minHeight: 44 },
                 isWeb && {
                   width: Math.min(width * 0.15, 80),
                   height: Math.min(width * 0.15, 80),
                   borderRadius: Math.min(width * 0.075, 40),
                 }
               ]}
-              onPress={handleClosePress}
-              accessibilityLabel="Fechar"
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.selectionAsync();
+                }
+                handleShare();
+              }}
+              activeOpacity={0.7}
+              accessibilityLabel="Compartilhar"
               accessibilityRole="button"
             >
               <Ionicons 
-                name="close" 
+                name="share-social" 
                 size={isWeb ? Math.min(width * 0.04, 32) : 24}
                 color="white" 
               />
@@ -708,6 +748,26 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Indicador de carregamento (Conectando...) */}
+          {isBuffering && (
+            <View style={{ alignItems: 'center', marginTop: 24 }}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={{ color: '#FFF', marginTop: 8, fontWeight: 'bold', fontSize: 16 }}>
+                Conectando...
+              </Text>
+            </View>
+          )}
+
+          {/* Indicador de reconexão automática */}
+          {isReconnecting && (
+            <View style={{ alignItems: 'center', marginTop: 24 }}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={{ color: '#FFF', marginTop: 8, fontWeight: 'bold', fontSize: 16 }}>
+                Reconectando...
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </ImageBackground>
@@ -756,7 +816,6 @@ const styles = StyleSheet.create({
     width: 280,
     height: 200,
     marginBottom: 5,
-    resizeMode: 'contain',
   },
   /** Container da onda de áudio */
   waveContainer: {
@@ -858,9 +917,13 @@ const styles = StyleSheet.create({
     opacity: 0.95,
     marginTop: 20,
     fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '1px 1px 3px rgba(0, 0, 0, 0.75)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.75)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 3,
+    }),
   },
   descriptionContainer: {
     position: 'absolute',
@@ -874,9 +937,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '1px 1px 3px rgba(0, 0, 0, 0.75)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.75)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 3,
+    }),
   },
   offlineMessage: {
     color: '#FFD700',
@@ -886,5 +953,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 8,
     borderRadius: 4,
+  },
+  wave: {
+    width: 4,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    marginHorizontal: 2,
+    borderRadius: 2,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0px 0px 5px rgba(255, 255, 255, 0.5)',
+    } : {
+      shadowColor: '#FFFFFF',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5,
+      shadowRadius: 5,
+      elevation: 5,
+    }),
   },
 }); 

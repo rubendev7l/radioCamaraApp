@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
@@ -8,7 +8,7 @@ import { useStreamStatus } from '../hooks/useStreamStatus';
 
 export const AudioPlayer = () => {
   const { isPlaying, play, pause, canPlay } = useAudioPlayer();
-  const { status, isBuffering } = useStreamStatus();
+  const { status, isBuffering, getStatusMessage, isConnected, isInternetReachable } = useStreamStatus();
   const { colors } = useTheme();
 
   const handlePlayPause = () => {
@@ -20,10 +20,45 @@ export const AudioPlayer = () => {
   };
 
   const getStatusColor = () => {
-    if (isBuffering) return colors.warning;
-    if (!canPlay) return colors.error;
-    return colors.primary;
+    // Estados de erro têm prioridade
+    if (!isConnected || !isInternetReachable || status === 'no_internet') {
+      return colors.error;
+    }
+    if (status === 'error' || status === 'offline') {
+      return colors.error;
+    }
+
+    // Estados de carregamento/reconexão
+    if (status === 'buffering' || status === 'loading' || status === 'reconnecting') {
+      return colors.warning;
+    }
+
+    // Estados normais
+    if (status === 'playing') {
+      return colors.success;
+    }
+    if (status === 'paused') {
+      return colors.text;
+    }
+
+    // Estado padrão
+    return colors.text;
   };
+
+  const isButtonDisabled =
+    !canPlay ||
+    !isConnected ||
+    !isInternetReachable ||
+    status === 'offline' ||
+    status === 'no_internet' ||
+    status === 'loading' ||
+    status === 'reconnecting' ||
+    isBuffering;
+
+  const showLoadingIndicator = 
+    isBuffering || 
+    status === 'loading' || 
+    status === 'reconnecting';
 
   return (
     <View style={styles.container}>
@@ -32,13 +67,18 @@ export const AudioPlayer = () => {
       <View style={styles.controls}>
         <TouchableOpacity
           onPress={handlePlayPause}
-          disabled={!canPlay}
+          disabled={isButtonDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={isPlaying ? 'Pausar transmissão' : 'Reproduzir transmissão'}
           style={[
             styles.playButton,
-            { backgroundColor: getStatusColor() }
+            { 
+              backgroundColor: getStatusColor(),
+              opacity: isButtonDisabled ? 0.5 : 1,
+            },
           ]}
         >
-          {isBuffering ? (
+          {showLoadingIndicator ? (
             <ActivityIndicator color={colors.background} />
           ) : (
             <MaterialIcons
@@ -49,6 +89,9 @@ export const AudioPlayer = () => {
           )}
         </TouchableOpacity>
       </View>
+      <Text style={[styles.statusText, { color: getStatusColor() }]}>
+        {getStatusMessage()}
+      </Text>
     </View>
   );
 };
@@ -75,5 +118,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  statusText: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: '500',
   },
 }); 

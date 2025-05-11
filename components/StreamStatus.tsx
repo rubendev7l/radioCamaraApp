@@ -8,38 +8,63 @@ import { useStreamMonitor } from '../hooks/useStreamMonitor';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 
 export const StreamStatus = () => {
-  const { status, error, isBuffering } = useStreamStatus();
+  const { status, error, isBuffering, getStatusMessage, isConnected, isInternetReachable } = useStreamStatus();
   const { quality, type } = useNetworkStatus();
   const { isStreamOnline, isChecking, streamError } = useStreamMonitor();
   const { initialLoadError } = useAudioPlayer();
   const { colors } = useTheme();
 
-  const getStatusMessage = () => {
-    if (isChecking) return 'Verificando transmissão...';
-    if (streamError) return streamError;
-    if (isStreamOnline === false) return 'Transmissão fora do ar';
-    if (error) return error;
-    if (isBuffering) return 'Carregando...';
-    if (status === 'loading') return 'Iniciando...';
-    if (status === 'playing') return 'Ao vivo';
-    if (status === 'idle') return 'Pronto para reproduzir';
-    return 'Offline';
-  };
+  const statusMessage = getStatusMessage();
 
   const getStatusColor = () => {
-    if (isChecking) return colors.text;
-    if (streamError || isStreamOnline === false) return colors.error;
-    if (error) return colors.error;
-    if (isBuffering || status === 'loading') return colors.warning;
-    if (status === 'playing') return colors.success;
+    // Estados de erro têm prioridade
+    if (!isConnected || !isInternetReachable || status === 'no_internet') {
+      return colors.error;
+    }
+    if (status === 'error' || status === 'offline') {
+      return colors.error;
+    }
+
+    // Estados de carregamento/reconexão
+    if (status === 'buffering' || status === 'loading' || status === 'reconnecting') {
+      return colors.warning;
+    }
+
+    // Estados normais
+    if (status === 'playing') {
+      return colors.success;
+    }
+    if (status === 'paused') {
+      return colors.text;
+    }
+
+    // Estado padrão
     return colors.text;
   };
 
   const getNetworkMessage = () => {
+    if (!isConnected || !isInternetReachable) return 'Sem conexão';
     if (type === 'wifi') return 'WiFi';
     if (type === 'cellular') return 'Dados móveis';
-    return 'Sem conexão';
+    return 'Desconhecido';
   };
+
+  const getStatusIcon = () => {
+    // Ícone de rádio para estados ativos (playing ou paused)
+    if (status === 'playing' || status === 'paused') {
+      return 'radio';
+    }
+    
+    // Ícone de erro para estados problemáticos
+    if (status === 'error' || status === 'offline' || status === 'no_internet') {
+      return 'error';
+    }
+    
+    // Ícone padrão para outros estados
+    return 'radio-button-unchecked';
+  };
+
+  const showLiveIndicator = status === 'playing' || status === 'paused';
 
   return (
     <View style={styles.container}>
@@ -48,19 +73,22 @@ export const StreamStatus = () => {
           <ActivityIndicator size="small" color={colors.text} />
         ) : (
           <MaterialIcons
-            name={status === 'playing' ? 'radio' : 'radio-button-unchecked'}
+            name={getStatusIcon()}
             size={16}
             color={getStatusColor()}
           />
         )}
         <Text style={[styles.statusText, { color: getStatusColor() }]}>
-          {getStatusMessage()}
+          {statusMessage}
         </Text>
+        {showLiveIndicator && (
+          <View style={[styles.liveIndicator, { backgroundColor: getStatusColor() }]} />
+        )}
       </View>
 
       <View style={styles.networkContainer}>
         <MaterialIcons
-          name={quality === 'unavailable' ? 'wifi-off' : 'wifi'}
+          name={quality === 'unavailable' || !isConnected || !isInternetReachable ? 'wifi-off' : 'wifi'}
           size={16}
           color={colors.text}
         />
@@ -94,5 +122,11 @@ const styles = StyleSheet.create({
   networkText: {
     fontSize: 12,
     opacity: 0.8,
+  },
+  liveIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 4,
   },
 }); 

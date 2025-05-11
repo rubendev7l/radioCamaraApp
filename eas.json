@@ -8,8 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "gradleCommand": ":app:bundleDebug",
-        "buildType": "app-bundle"
+        "gradleCommand": ":app:assembleDebug",
+        "buildType": "apk"
       }
     },
     "preview": {
@@ -20,16 +20,11 @@
       }
     },
     "production": {
-      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease",
-        "gradleProperties": {
-          "android.enableR8": true
-        }
+        "gradleCommand": ":app:bundleRelease"
       },
-      "channel": "production",
-      "runtimeVersion": "52.0.0"
+      "channel": "production"
     },
     "development-simulator": {
       "developmentClient": true,

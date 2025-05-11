@@ -47,12 +47,22 @@ export const RADIO_CONFIG = {
     URL: 'https://www.camarasete.mg.gov.br/comunicacao/radio-camara',
   },
 
-  /** Mensagens de erro do app */
+  /** Mensagens de erro e status do app */
   ERROR_MESSAGES: {
     SHARE_ERROR: 'Erro ao compartilhar',
     PLAYBACK_ERROR: 'Erro ao reproduzir o áudio',
     CONNECTION_ERROR: 'Erro de conexão',
     LOAD_ERROR: 'Erro ao carregar o áudio',
+    NO_INTERNET: 'Sem conexão com a internet',
+    RECONNECTING: 'Reconectando...',
+    PAUSED: 'Ao vivo (pausado)',
+    PLAYING: 'Ao vivo',
+    OFFLINE: 'Transmissão fora do ar',
+    STREAM_OFFLINE: 'Transmissão fora do ar',
+    BUFFERING: 'Carregando...',
+    READY: 'Pronto para ouvir',
+    NETWORK_UNSTABLE: 'Conexão de rede instável. Aguarde uma conexão melhor para ouvir a rádio.',
+    ERROR_LOADING_STREAM: 'Erro ao carregar o áudio',
   },
 };
 

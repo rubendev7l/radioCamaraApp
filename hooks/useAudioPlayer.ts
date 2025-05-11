@@ -69,6 +69,13 @@ export const useAudioPlayer = () => {
       updateStatus('buffering');
     } else if (status.isPlaying) {
       updateStatus('playing');
+    } else if (soundRef.current) {
+      // Se não está tocando mas o player existe, verifica o estado
+      if (status.isBuffering || status.isLoaded === false) {
+        updateStatus('buffering');
+      } else {
+        updateStatus('paused');
+      }
     }
   };
 
@@ -98,8 +105,18 @@ export const useAudioPlayer = () => {
 
   const pause = useCallback(async () => {
     try {
-      await soundRef.current?.pauseAsync();
-      updateStatus('idle');
+      const status = await soundRef.current?.getStatusAsync();
+      
+      if (status?.isLoaded) {
+        if (status.isBuffering) {
+          updateStatus('buffering');
+        } else {
+          await soundRef.current?.pauseAsync();
+          updateStatus('paused');
+        }
+      } else {
+        updateStatus('error', RADIO_CONFIG.ERROR_MESSAGES.ERROR_LOADING_STREAM);
+      }
     } catch (error) {
       const errorMessage = 'Erro ao pausar a reprodução. Tente novamente.';
       handleError(errorMessage);
