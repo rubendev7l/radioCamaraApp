@@ -1,3 +1,30 @@
+/**
+ * RadioPlayer.tsx
+ * 
+ * Componente principal do player de rádio da Câmara Municipal de Sete Lagoas.
+ * Responsável por gerenciar a reprodução do stream de áudio, controles de playback,
+ * notificações e interações do usuário.
+ * 
+ * Funcionalidades Principais:
+ * - Streaming de áudio em tempo real
+ * - Reprodução em segundo plano
+ * - Controles de playback (play/pause, mute)
+ * - Notificações com controles
+ * - Indicador visual de status
+ * - Tratamento de erros e reconexão
+ * - Compartilhamento
+ * - Feedback tátil (haptics)
+ * 
+ * Dependências:
+ * - expo-av: Para streaming de áudio
+ * - expo-notifications: Para notificações
+ * - expo-haptics: Para feedback tátil
+ * - @react-native-async-storage/async-storage: Para persistência de configurações
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import { 
   View, 

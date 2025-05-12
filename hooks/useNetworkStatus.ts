@@ -1,3 +1,39 @@
+/**
+ * useNetworkStatus.ts
+ * 
+ * Hook personalizado para monitoramento e gerenciamento do status da rede.
+ * Fornece informações detalhadas sobre a conexão do dispositivo com:
+ * - Tipo de conexão (WiFi/Celular)
+ * - Qualidade da conexão
+ * - Detalhes específicos da rede
+ * - Verificação de adequação para streaming
+ * 
+ * Estados de Qualidade:
+ * - excellent: Conexão excelente (WiFi forte)
+ * - good: Conexão boa (WiFi/Celular 4G/5G)
+ * - poor: Conexão ruim (Celular 3G ou inferior)
+ * - unavailable: Sem conexão
+ * 
+ * Tipos de Conexão:
+ * - wifi: Conexão WiFi
+ * - cellular: Dados móveis
+ * - unknown: Tipo desconhecido
+ * 
+ * Funcionalidades:
+ * - Monitoramento em tempo real
+ * - Detecção de tipo de rede
+ * - Avaliação de qualidade
+ * - Verificação de adequação
+ * - Detalhes de geração celular
+ * - Força do sinal WiFi
+ * 
+ * Dependências:
+ * - @react-native-community/netinfo: Para informações de rede
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import { useEffect, useState } from 'react';
 import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
 import { Platform } from 'react-native';

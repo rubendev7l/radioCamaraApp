@@ -1,3 +1,42 @@
+/**
+ * useStreamStatus.ts
+ * 
+ * Hook personalizado para gerenciamento do status do stream de áudio.
+ * Fornece um sistema robusto de monitoramento e controle de estado com:
+ * - Monitoramento de conexão
+ * - Verificação de disponibilidade do stream
+ * - Gerenciamento de estados de buffering
+ * - Tratamento de erros
+ * - Logging detalhado
+ * 
+ * Estados do Stream:
+ * - idle: Inicial
+ * - loading: Carregando stream
+ * - playing: Reprodução ativa
+ * - paused: Reprodução pausada
+ * - buffering: Bufferizando
+ * - error: Erro na reprodução
+ * - offline: Stream indisponível
+ * - no_internet: Sem conexão
+ * - reconnecting: Reconectando
+ * 
+ * Funcionalidades:
+ * - Monitoramento de conexão
+ * - Verificação de stream
+ * - Gerenciamento de buffering
+ * - Tratamento de erros
+ * - Logging de mudanças
+ * - Mensagens de status
+ * 
+ * Dependências:
+ * - hooks/useNetworkStatus: Para status da rede
+ * - hooks/useStreamMonitor: Para monitoramento do stream
+ * - constants/radio: Para mensagens de erro
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import { useState, useCallback, useEffect } from 'react';
 import { useNetworkStatus } from './useNetworkStatus';
 import { useStreamMonitor } from './useStreamMonitor';

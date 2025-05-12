@@ -36,15 +36,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="podcasts"
-        options={{
-          title: 'Podcasts',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="mic" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="messages"
         options={{
           title: 'Mensagem',

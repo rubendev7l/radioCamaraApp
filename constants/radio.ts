@@ -1,3 +1,32 @@
+/**
+ * radio.ts
+ * 
+ * Arquivo de configurações e constantes do aplicativo da Rádio Câmara.
+ * Contém todas as configurações necessárias para o funcionamento do app.
+ * 
+ * Configurações Principais:
+ * - Informações da estação
+ * - URLs de stream
+ * - Redes sociais
+ * - Recursos visuais
+ * - Temas e cores
+ * - Mensagens de erro
+ * - Configurações do player
+ * 
+ * Estrutura:
+ * - RADIO_CONFIG: Configurações gerais da rádio
+ * - PLAYER_CONFIG: Configurações específicas do player
+ * 
+ * Uso:
+ * Importe as constantes necessárias em seus componentes:
+ * ```typescript
+ * import { RADIO_CONFIG, PLAYER_CONFIG } from '../constants/radio';
+ * ```
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 /** 
  * Configurações principais da rádio
  * Contém todas as informações necessárias para o funcionamento do app

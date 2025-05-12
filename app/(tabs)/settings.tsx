@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import { RADIO_CONFIG } from '../../constants/radio';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -81,6 +82,10 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('Error opening URL:', error);
     }
+  };
+
+  const handleOpenWebsite = () => {
+    Linking.openURL('https://www.camarasete.mg.gov.br');
   };
 
   return (
@@ -196,7 +201,21 @@ export default function SettingsScreen() {
             >
               <Ionicons name="logo-flickr" size={32} color={COLORS.PRIMARY} />
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => handleSocialMediaPress('https://open.spotify.com/show/01a4F30Ajd5CThsrbKsbWx')}
+            >
+              <FontAwesome name="spotify" size={32} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
           </View>
+          <TouchableOpacity 
+            style={styles.websiteButton}
+            onPress={handleOpenWebsite}
+          >
+            <Ionicons name="globe-outline" size={24} color={COLORS.PRIMARY} />
+            <Text style={[styles.websiteButtonText, { color: COLORS.TEXT.DARK }]}>Site da Câmara</Text>
+            <Ionicons name="chevron-forward" size={24} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -204,7 +223,7 @@ export default function SettingsScreen() {
             Suporte
           </Text>
           <Text style={[styles.supportText, { color: COLORS.TEXT.DARK }]}>
-            Em caso de problemas com o aplicativo, entre em contato com nosso suporte técnico:
+            Em caso de problemas com o aplicativo ou com a transmissão da rádio, entre em contato com nosso suporte técnico:
           </Text>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: COLORS.PRIMARY }]}
@@ -212,17 +231,6 @@ export default function SettingsScreen() {
           >
             <Ionicons name="mail" size={24} color="white" />
             <Text style={[styles.buttonText, { color: 'white' }]}>Suporte Técnico</Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.supportText, { color: COLORS.TEXT.DARK, marginTop: 24 }]}>
-            Em caso de problemas com a transmissão da rádio:
-          </Text>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: COLORS.PRIMARY }]}
-            onPress={() => handleSocialMediaPress('https://wa.me/5531986340773')}
-          >
-            <Ionicons name="logo-whatsapp" size={24} color="white" />
-            <Text style={[styles.buttonText, { color: 'white' }]}>Contato da Rádio</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -266,61 +274,88 @@ const styles = StyleSheet.create({
   settingText: {
     fontSize: 16,
   },
+  linkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  linkButtonText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 12,
+  },
   socialButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 16,
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
   socialButton: {
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
-    backgroundColor: COLORS.BACKGROUND,
-    elevation: 4,
-    width: 64,
-    height: 64,
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    padding: 16,
     borderRadius: 8,
-    marginBottom: 12,
+    marginTop: 16,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
   },
-  phoneButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.BACKGROUND,
-    elevation: 2,
-  },
-  phoneText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  versionContainer: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  versionText: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
   supportText: {
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
+    lineHeight: 20,
+  },
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  websiteButtonText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  versionContainer: {
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 'auto',
+  },
+  versionText: {
+    fontSize: 14,
+    opacity: 0.7,
   },
   disabledSetting: {
     opacity: 0.7,

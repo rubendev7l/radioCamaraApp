@@ -72,7 +72,8 @@
           "color": "#ffffff",
           "sounds": []
         }
-      ]
+      ],
+      "expo-router"
     ],
     "extra": {
       "eas": {

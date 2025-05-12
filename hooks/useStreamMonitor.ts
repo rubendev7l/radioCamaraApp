@@ -1,3 +1,35 @@
+/**
+ * useStreamMonitor.ts
+ * 
+ * Hook personalizado para monitoramento contínuo do status do stream de áudio.
+ * Fornece verificação periódica da disponibilidade do stream com:
+ * - Verificação automática a cada 30 segundos
+ * - Notificações de mudança de status
+ * - Monitoramento do estado do app
+ * - Tratamento de erros
+ * 
+ * Funcionalidades:
+ * - Verificação periódica do stream
+ * - Notificações de status
+ * - Monitoramento de estado do app
+ * - Reconexão automática
+ * - Logging de erros
+ * - Gerenciamento de estado
+ * 
+ * Estados:
+ * - isStreamOnline: Status atual do stream
+ * - isChecking: Em processo de verificação
+ * - streamError: Mensagem de erro (se houver)
+ * 
+ * Dependências:
+ * - expo-av: Para verificação do stream
+ * - expo-notifications: Para notificações
+ * - constants/radio: Para configurações
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';

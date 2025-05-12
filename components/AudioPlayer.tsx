@@ -1,3 +1,41 @@
+/**
+ * AudioPlayer.tsx
+ * 
+ * Componente de controle de reprodução de áudio que gerencia:
+ * - Botões de play/pause
+ * - Indicadores de status
+ * - Feedback visual de carregamento
+ * - Estados de erro e conexão
+ * 
+ * Características:
+ * - Interface intuitiva e responsiva
+ * - Feedback visual em tempo real
+ * - Suporte a acessibilidade
+ * - Indicadores de estado coloridos
+ * - Animações de carregamento
+ * - Controles adaptativos
+ * 
+ * Estados de Reprodução:
+ * - playing: Reprodução ativa
+ * - paused: Reprodução pausada
+ * - buffering: Carregando stream
+ * - loading: Inicializando
+ * - reconnecting: Reconectando
+ * - error: Erro na reprodução
+ * - offline: Stream offline
+ * - no_internet: Sem conexão
+ * 
+ * Dependências:
+ * - @react-navigation/native: Para temas
+ * - @expo/vector-icons: Para ícones
+ * - hooks/useAudioPlayer: Para controle de áudio
+ * - hooks/useStreamStatus: Para status do stream
+ * - components/StreamStatus: Para exibição de status
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,16 +45,12 @@ import { StreamStatus } from './StreamStatus';
 import { useStreamStatus } from '../hooks/useStreamStatus';
 
 export const AudioPlayer = () => {
-  const { isPlaying, play, pause, canPlay } = useAudioPlayer();
+  const { isPlaying, togglePlayback, setupAudio } = useAudioPlayer();
   const { status, isBuffering, getStatusMessage, isConnected, isInternetReachable } = useStreamStatus();
   const { colors } = useTheme();
 
   const handlePlayPause = () => {
-    if (isPlaying) {
-      pause();
-    } else {
-      play();
-    }
+    togglePlayback();
   };
 
   const getStatusColor = () => {
@@ -46,7 +80,6 @@ export const AudioPlayer = () => {
   };
 
   const isButtonDisabled =
-    !canPlay ||
     !isConnected ||
     !isInternetReachable ||
     status === 'offline' ||

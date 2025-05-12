@@ -85,4 +85,7 @@ local.properties
 # Temporary files
 *.log
 *.tmp
-*.temp 
+*.temp
+
+# Google Service Account
+google-service-account-key.json 

@@ -1,3 +1,30 @@
+/**
+ * AudioWave.tsx
+ * 
+ * Componente de visualização de onda de áudio animada para o player de rádio.
+ * Cria um efeito visual de equalizador que responde ao estado de reprodução.
+ * 
+ * Características:
+ * - 8 barras animadas que simulam um equalizador
+ * - Efeito de brilho e sombra nas barras
+ * - Animações suaves usando React Native Animated
+ * - Performance otimizada com useNativeDriver
+ * - Responsivo a diferentes tamanhos de tela
+ * 
+ * Funcionalidades:
+ * - Animação contínua durante a reprodução
+ * - Efeito de brilho pulsante
+ * - Reset suave ao pausar
+ * - Limpeza automática de animações
+ * 
+ * Dependências:
+ * - react-native: Para componentes base
+ * - Animated: Para animações
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Easing } from 'react-native';
 

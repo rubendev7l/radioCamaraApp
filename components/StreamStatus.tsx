@@ -1,3 +1,37 @@
+/**
+ * StreamStatus.tsx
+ * 
+ * Componente de status do stream de áudio que exibe informações sobre:
+ * - Estado atual da reprodução
+ * - Qualidade da conexão
+ * - Status da rede
+ * - Indicador visual de transmissão ao vivo
+ * 
+ * Características:
+ * - Feedback visual em tempo real
+ * - Indicadores de estado coloridos
+ * - Informações de rede
+ * - Indicador "AO VIVO" dinâmico
+ * - Suporte a temas claro/escuro
+ * 
+ * Estados de Status:
+ * - playing: Reprodução normal
+ * - paused: Reprodução pausada
+ * - buffering: Carregando stream
+ * - error: Erro na reprodução
+ * - offline: Stream offline
+ * - no_internet: Sem conexão
+ * - reconnecting: Tentando reconectar
+ * 
+ * Dependências:
+ * - @react-navigation/native: Para temas
+ * - @expo/vector-icons: Para ícones
+ * - hooks personalizados: useStreamStatus, useNetworkStatus, useStreamMonitor, useAudioPlayer
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import React from 'react';
 import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';

@@ -1,3 +1,36 @@
+/**
+ * NetworkStatusIndicator.tsx
+ * 
+ * Componente que exibe o status atual da conexão de rede do dispositivo.
+ * Fornece feedback visual sobre a qualidade e tipo de conexão disponível.
+ * 
+ * Características:
+ * - Indicador visual da qualidade da rede
+ * - Identificação do tipo de conexão (WiFi/Dados)
+ * - Cores dinâmicas baseadas na qualidade
+ * - Ícones adaptativos
+ * - Suporte a temas claro/escuro
+ * 
+ * Estados de Qualidade:
+ * - excellent: Conexão excelente
+ * - good: Conexão boa
+ * - poor: Conexão ruim
+ * - unavailable: Sem conexão
+ * 
+ * Tipos de Conexão:
+ * - wifi: Conexão WiFi
+ * - cellular: Dados móveis
+ * - none: Sem conexão
+ * 
+ * Dependências:
+ * - @react-navigation/native: Para temas
+ * - @expo/vector-icons: Para ícones
+ * - hooks/useNetworkStatus: Para monitoramento da rede
+ * 
+ * @author Equipe de Desenvolvimento da Câmara Municipal
+ * @version 1.0.0
+ */
+
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { useNetworkStatus, NetworkQuality } from '../hooks/useNetworkStatus';
