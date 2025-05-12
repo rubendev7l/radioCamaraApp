@@ -56,5 +56,8 @@
         "listUnknownPackages": false
       }
     }
+  },
+  "overrides": {
+    "react-native": "0.76.9"
   }
 }

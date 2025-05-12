@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rádio Câmara Sete Lagoas",
     "slug": "radiocamarasetelagoas",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -28,6 +28,9 @@
         "UIBackgroundModes": [
           "audio",
           "fetch",
+          "remote-notification",
+          "audio",
+          "fetch",
           "remote-notification"
         ],
         "NSMicrophoneUsageDescription": "Este app não requer acesso ao microfone",
@@ -44,7 +47,7 @@
         "backgroundImage": "./assets/images/icon-background.png"
       },
       "package": "com.cm7.radiocamara",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "FOREGROUND_SERVICE",
         "WAKE_LOCK",
@@ -52,8 +55,15 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "RECEIVE_BOOT_COMPLETED",
-        "POST_NOTIFICATIONS"
-      ]
+        "POST_NOTIFICATIONS",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_CONNECT",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "softwareKeyboardLayoutMode": "pan",
+      "allowBackup": true
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -80,6 +90,9 @@
         "projectId": "bc1a10e4-534b-4c0f-94a8-c4928955237e"
       }
     },
-    "owner": "cm7"
+    "owner": "cm7",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

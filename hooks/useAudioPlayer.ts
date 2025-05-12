@@ -59,7 +59,7 @@ type PlaybackState = {
   retryCount: number;
 };
 
-type ErrorType = 'NETWORK' | 'PLAYBACK' | 'PERMISSION' | 'UNKNOWN';
+type ErrorType = 'NETWORK' | 'PLAYBACK' | 'PERMISSION' | 'UNKNOWN' | 'LOADING';
 
 export const useAudioPlayer = () => {
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -272,8 +272,9 @@ export const useAudioPlayer = () => {
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
-        interruptionModeAndroid: 1,
-        interruptionModeIOS: 1,
+        interruptionModeAndroid: 1, // DO_NOT_MIX
+        interruptionModeIOS: 1, // DO_NOT_MIX
+        allowsRecordingIOS: false,
       });
 
       // Limpar player existente para evitar vazamentos de memória
@@ -296,14 +297,21 @@ export const useAudioPlayer = () => {
             ? FOREGROUND_UPDATE_INTERVAL 
             : BACKGROUND_UPDATE_INTERVAL,
           androidImplementation: 'MediaPlayer', // Mais estável no Android
-        },
-        onPlaybackStatusUpdate
+          volume: 1.0,
+          rate: 1.0,
+          isLooping: false,
+          isMuted: false,
+        }
       );
 
       soundRef.current = sound;
       updateStatus('idle');
 
-      if (isNetworkSuitableForStreaming()) {
+      // Verificar se é uma central multimídia
+      const isCarHeadUnit = Platform.OS === 'android' && 
+        (await AsyncStorage.getItem('isCarHeadUnit') === 'true');
+
+      if (isCarHeadUnit || isNetworkSuitableForStreaming()) {
         try {
           await sound.playAsync();
           await showPlaybackNotification(true);
@@ -330,6 +338,29 @@ export const useAudioPlayer = () => {
       retryPlayback();
     }
   }, [isNetworkSuitableForStreaming, updateStatus, handleError, retryPlayback, logError, provideFeedback]);
+
+  // Detectar se está rodando em uma central multimídia
+  useEffect(() => {
+    const detectCarHeadUnit = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const isCar = await AsyncStorage.getItem('isCarHeadUnit');
+          if (!isCar) {
+            // Verificar características típicas de centrais multimídia
+            const isCarHeadUnit = 
+              Platform.constants.Brand?.toLowerCase().includes('android') &&
+              !Platform.constants.Brand?.toLowerCase().includes('phone');
+            
+            await AsyncStorage.setItem('isCarHeadUnit', isCarHeadUnit.toString());
+          }
+        } catch (error) {
+          console.error('Error detecting car head unit:', error);
+        }
+      }
+    };
+
+    detectCarHeadUnit();
+  }, []);
 
   // Otimizar toggle de reprodução
   const togglePlayback = useCallback(async () => {
