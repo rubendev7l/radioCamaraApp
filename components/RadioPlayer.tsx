@@ -53,6 +53,8 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { ForegroundService } from '../services/ForegroundService';
+import { showBatteryOptimizationAlert } from './showBatteryOptimizationAlert';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -158,27 +160,24 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    * Configura o áudio, notificações e listeners de estado do app
    */
   useEffect(() => {
-    setupAudio();
-    setupNotifications();
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    let notificationCleanup: (() => void) | undefined;
 
-    const notificationSubscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const actionId = response.actionIdentifier;
-        if (actionId === 'TOGGLE_PLAYBACK') {
-          togglePlayback();
-        } else if (actionId === 'STOP') {
-          handleExit();
-        }
-      }
-    );
+    const setup = async () => {
+      await setupAudio();
+      notificationCleanup = await setupNotifications();
+    };
+
+    setup();
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     return () => {
       if (soundRef.current) {
         soundRef.current.unloadAsync();
       }
       subscription.remove();
-      notificationSubscription.remove();
+      if (notificationCleanup) {
+        notificationCleanup();
+      }
     };
   }, []);
 
@@ -231,6 +230,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         } else {
           setHasError(true);
           setIsBuffering(false);
+          showBatteryOptimizationAlert();
         }
       });
 
@@ -242,6 +242,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     } catch (error) {
       console.error('Error setting up audio:', error);
       setHasError(true);
+      showBatteryOptimizationAlert();
     }
   };
 
@@ -250,49 +251,12 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    */
   const updateNotification = async () => {
     try {
-      // Verifica se está na web
-      if (Platform.OS === 'web') {
-        return; // Não tenta usar notificações na web
+      if (!notificationsEnabled) {
+        await ForegroundService.stopService();
+        return;
       }
 
-      // Remove todas as notificações existentes
-      await Notifications.dismissAllNotificationsAsync();
-
-      // Só mostra notificação se não houver erro ou se estiver pausado
-      if (!hasError || !isPlaying) {
-        const notificationContent = {
-          title: 'Rádio Câmara Sete Lagoas',
-          body: hasError ? 'Transmissão fora do ar' : (isPlaying ? 'Tocando agora' : 'Pausado'),
-          sound: false,
-          data: { url: currentStation.streamUrl },
-          android: {
-            channelId: 'radio-playback',
-            priority: 'max',
-            sticky: true,
-            icon: './assets/images/notification-icon.png',
-            color: '#FF231F7C',
-            actions: [
-              {
-                title: hasError ? 'Tentar novamente' : (isPlaying ? 'Pausar' : 'Tocar'),
-                pressAction: {
-                  id: 'TOGGLE_PLAYBACK',
-                },
-              },
-              {
-                title: 'Fechar',
-                pressAction: {
-                  id: 'STOP',
-                },
-              },
-            ],
-          },
-        };
-
-        await Notifications.scheduleNotificationAsync({
-          content: notificationContent,
-          trigger: null,
-        });
-      }
+      await ForegroundService.startService(isPlaying);
     } catch (error) {
       console.error('Erro ao atualizar notificação:', error);
     }
@@ -327,6 +291,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     } catch (error) {
       console.error('Error toggling playback:', error);
       setHasError(true);
+      showBatteryOptimizationAlert();
     }
   };
 
@@ -359,8 +324,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       }
 
       // Remove todas as notificações
-      await Notifications.dismissAllNotificationsAsync();
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await ForegroundService.stopService();
 
       // Libera recursos de áudio
       await Audio.setAudioModeAsync({
@@ -370,11 +334,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         interruptionModeAndroid: 1,
         interruptionModeIOS: 1,
       });
-
-      // Limpa o canal de notificações no Android
-      if (Platform.OS === 'android') {
-        await Notifications.deleteNotificationChannelAsync('radio-playback');
-      }
 
       // Força o fechamento do app
       if (Platform.OS === 'android') {
@@ -440,6 +399,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     } catch (error) {
       console.error('Error reloading:', error);
       setHasError(true);
+      showBatteryOptimizationAlert();
     }
   };
 
@@ -469,11 +429,10 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    * Configura o canal de notificações no Android
    * Permite controle de reprodução pela notificação
    */
-  const setupNotifications = async () => {
+  const setupNotifications = async (): Promise<() => void> => {
     try {
-      // Verifica se está na web
       if (Platform.OS === 'web') {
-        return; // Não tenta configurar notificações na web
+        return () => {};
       }
 
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -486,42 +445,27 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
       if (finalStatus !== 'granted') {
         console.log('Permissão para notificações não concedida');
-        return;
+        return () => {};
       }
 
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('radio-playback', {
-          name: 'Radio Playback',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0],
-          lightColor: '#FF231F7C',
-          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-          bypassDnd: true,
-          sound: null,
-          enableLights: true,
-          enableVibrate: false,
-        });
-      }
+      await ForegroundService.initialize();
 
-      await Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-          priority: Notifications.AndroidNotificationPriority.MAX,
-          sticky: true,
-          vibrate: false,
-          android: {
-            channelId: 'radio-playback',
-            priority: 'max',
-            sticky: true,
-            icon: './assets/images/notification-icon.png',
-            color: '#FF231F7C',
-          },
-        }),
+      // Configurar o listener para os botões da notificação
+      const subscription = ForegroundService.onButtonPress((response) => {
+        const actionId = response.actionIdentifier;
+        if (actionId === 'TOGGLE_PLAYBACK') {
+          togglePlayback();
+        } else if (actionId === 'STOP') {
+          handleExit();
+        }
       });
+
+      return () => {
+        ForegroundService.offButtonPress(subscription);
+      };
     } catch (error) {
       console.error('Erro ao configurar notificações:', error);
+      return () => {};
     }
   };
 
@@ -530,9 +474,13 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    */
   const handleShare = async () => {
     try {
-      const result = await Share.share({
-        message: `🎧 Ouvindo Rádio Câmara Sete Lagoas\n${currentStation.description || 'A voz do legislativo de Sete Lagoas'}\n\nOuça também: https://www.camarasete.mg.gov.br/comunicacao/radio-camara`,
-        url: 'https://www.camarasete.mg.gov.br/comunicacao/radio-camara'
+      if (Platform.OS !== 'web') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      await Share.share({
+        message: `📻 Estou ouvindo a Rádio Câmara Sete Lagoas!\n\nAcompanhe também a transmissão ao vivo e fique por dentro das notícias do Legislativo.\n\nOuça agora: https://www.camarasete.mg.gov.br/comunicacao/radio-camara`,
+        url: 'https://www.camarasete.mg.gov.br/comunicacao/radio-camara',
+        title: 'Rádio Câmara Sete Lagoas',
       });
     } catch (error) {
       console.error('Erro ao compartilhar:', error);
@@ -690,27 +638,22 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             <TouchableOpacity
               style={[
                 styles.controlButton,
-                { minWidth: 44, minHeight: 44 },
+                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
                 isWeb && {
                   width: Math.min(width * 0.15, 80),
                   height: Math.min(width * 0.15, 80),
                   borderRadius: Math.min(width * 0.075, 40),
                 }
               ]}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.selectionAsync();
-                }
-                handleShare();
-              }}
+              onPress={handleShare}
               activeOpacity={0.7}
-              accessibilityLabel="Compartilhar"
+              accessibilityLabel="Compartilhar a rádio"
               accessibilityRole="button"
             >
               <Ionicons 
                 name="share-social" 
                 size={isWeb ? Math.min(width * 0.04, 32) : 24}
-                color="white" 
+                color="#1B4B8F"
               />
             </TouchableOpacity>
           </View>
@@ -741,6 +684,12 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               )}
             </View>
           </View>
+          {/* Banner de status de rede */}
+          {!isConnected && (
+            <View style={styles.networkBanner} accessibilityRole="alert">
+              <Text style={styles.networkBannerText}>Sem conexão com a internet</Text>
+            </View>
+          )}
 
           {/** Botão de recarregar em caso de erro */}
           {hasError && (
@@ -996,5 +945,22 @@ const styles = StyleSheet.create({
       shadowRadius: 5,
       elevation: 5,
     }),
+  },
+  networkBanner: {
+    marginTop: 12,
+    backgroundColor: '#1B4B8F',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    minWidth: 200,
+  },
+  networkBannerText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+    textAlign: 'center',
   },
 }); 

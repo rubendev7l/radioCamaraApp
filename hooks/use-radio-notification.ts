@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationSettings } from '../types/radio';
+import { ForegroundService } from '../services/ForegroundService';
 
 interface UseRadioNotificationProps {
   stationName: string;
@@ -46,58 +46,29 @@ export function useRadioNotification({
   };
 
   const setupNotificationHandlers = () => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const actionId = response.actionIdentifier;
-        if (actionId === 'TOGGLE_PLAYBACK') {
-          onTogglePlayback();
-        } else if (actionId === 'STOP') {
-          onStop();
-        }
+    const subscription = ForegroundService.onButtonPress((response) => {
+      const actionId = response.actionIdentifier;
+      if (actionId === 'TOGGLE_PLAYBACK') {
+        onTogglePlayback();
+      } else if (actionId === 'STOP') {
+        onStop();
       }
-    );
+    });
 
     return () => {
-      subscription.remove();
+      ForegroundService.offButtonPress(subscription);
     };
   };
 
   const updateNotification = async () => {
     try {
-      await Notifications.dismissAllNotificationsAsync();
+      if (!settings.playback) {
+        await ForegroundService.stopService();
+        return;
+      }
 
       if (!hasError || !isPlaying) {
-        const notificationContent = {
-          title: stationName,
-          body: hasError ? 'Transmissão fora do ar' : (isPlaying ? 'Tocando agora' : 'Pausado'),
-          sound: false,
-          android: {
-            channelId: 'radio-playback',
-            priority: 'max',
-            sticky: true,
-            icon: './assets/images/notification-icon.png',
-            color: '#FF231F7C',
-            actions: [
-              {
-                title: hasError ? 'Tentar novamente' : (isPlaying ? 'Pausar' : 'Tocar'),
-                pressAction: {
-                  id: 'TOGGLE_PLAYBACK',
-                },
-              },
-              {
-                title: 'Fechar',
-                pressAction: {
-                  id: 'STOP',
-                },
-              },
-            ],
-          },
-        };
-
-        await Notifications.scheduleNotificationAsync({
-          content: notificationContent,
-          trigger: null,
-        });
+        await ForegroundService.startService(isPlaying);
       }
     } catch (error) {
       console.error('Error updating notification:', error);
@@ -112,6 +83,10 @@ export function useRadioNotification({
       };
       await AsyncStorage.setItem('notificationSettings', JSON.stringify(newSettings));
       setSettings(newSettings);
+
+      if (key === 'playback' && !newSettings.playback) {
+        await ForegroundService.stopService();
+      }
     } catch (error) {
       console.error('Error toggling notification setting:', error);
     }

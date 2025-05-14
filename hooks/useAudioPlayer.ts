@@ -43,6 +43,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStreamStatus } from './useStreamStatus';
 import { useNetworkStatus } from './useNetworkStatus';
 import { RADIO_CONFIG } from '../constants/radio';
+import { ForegroundService } from '../services/ForegroundService';
 
 const PLAYBACK_STATE_KEY = '@radio_playback_state';
 const MAX_RETRY_ATTEMPTS = 3;
@@ -191,39 +192,11 @@ export const useAudioPlayer = () => {
 
   // Configura a notificação persistente
   const setupNotification = async () => {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('radio-playback', {
-        name: 'Reprodução da Rádio',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-        enableVibrate: true,
-        enableLights: true,
-      });
-    }
+    await ForegroundService.initialize();
   };
 
   const showPlaybackNotification = async (isPlaying: boolean) => {
-    if (Platform.OS === 'android') {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Rádio Câmara Sete Lagoas',
-          body: isPlaying ? 'Ao vivo' : 'Pausado',
-          data: { type: 'playback' },
-          sticky: true,
-          autoDismiss: false,
-        },
-        trigger: null,
-        android: {
-          channelId: 'radio-playback',
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          sticky: true,
-          ongoing: true,
-          autoCancel: false,
-          showWhen: false,
-        },
-      } as Notifications.NotificationRequestInput);
-    }
+    await ForegroundService.startService(isPlaying);
   };
 
   // Gerenciar estado do app para otimizar recursos
@@ -261,83 +234,132 @@ export const useAudioPlayer = () => {
     };
   }, [isPlaying]);
 
+  // Inicializa o foreground service
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      ForegroundService.initialize();
+    }
+  }, []);
+
+  // Inicia o foreground service quando começa a tocar
+  const startForegroundService = useCallback(async () => {
+    if (Platform.OS === 'android') {
+      await ForegroundService.startService(isPlaying);
+    }
+  }, [isPlaying]);
+
+  // Para o foreground service quando para de tocar
+  const stopForegroundService = useCallback(async () => {
+    if (Platform.OS === 'android') {
+      await ForegroundService.stopService();
+    }
+  }, []);
+
+  // Atualiza a notificação quando o estado de reprodução muda
+  const updateForegroundNotification = useCallback(async () => {
+    if (Platform.OS === 'android') {
+      await ForegroundService.updateNotification(isPlaying);
+    }
+  }, [isPlaying]);
+
   // Otimizar setup de áudio
   const setupAudio = useCallback(async () => {
     try {
-      await setupNotification();
-      
-      // Configurar modo de áudio otimizado
+      if (!canPlay || !isNetworkSuitableForStreaming) {
+        throw new Error('Condições não adequadas para reprodução');
+      }
+
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
-        shouldDuckAndroid: true,
+        shouldDuckAndroid: false,
         playThroughEarpieceAndroid: false,
         interruptionModeAndroid: 1, // DO_NOT_MIX
         interruptionModeIOS: 1, // DO_NOT_MIX
-        allowsRecordingIOS: false,
       });
 
-      // Limpar player existente para evitar vazamentos de memória
       if (soundRef.current) {
-        try {
-          await soundRef.current.stopAsync();
-          await soundRef.current.unloadAsync();
-        } catch (error) {
-          logError('PLAYBACK', error, 'cleanupExistingPlayer');
-        }
-        soundRef.current = null;
+        await soundRef.current.unloadAsync();
       }
 
-      // Criar novo player com configurações otimizadas
       const { sound } = await Audio.Sound.createAsync(
         { uri: RADIO_CONFIG.STREAM_URL },
-        { 
-          shouldPlay: false,
-          progressUpdateIntervalMillis: appStateRef.current === 'active' 
-            ? FOREGROUND_UPDATE_INTERVAL 
-            : BACKGROUND_UPDATE_INTERVAL,
-          androidImplementation: 'MediaPlayer', // Mais estável no Android
-          volume: 1.0,
-          rate: 1.0,
-          isLooping: false,
-          isMuted: false,
-        }
+        { shouldPlay: true },
+        onPlaybackStatusUpdate
       );
 
       soundRef.current = sound;
-      updateStatus('idle');
+      setIsPlaying(true);
+      await startForegroundService();
+      provideFeedback('success');
+    } catch (error) {
+      logError('PLAYBACK', error, 'setupAudio');
+      provideFeedback('error');
+      throw error;
+    }
+  }, [canPlay, isNetworkSuitableForStreaming, logError, provideFeedback, startForegroundService]);
 
-      // Verificar se é uma central multimídia
-      const isCarHeadUnit = Platform.OS === 'android' && 
-        (await AsyncStorage.getItem('isCarHeadUnit') === 'true');
+  // Otimizar toggle de reprodução
+  const togglePlayback = useCallback(async () => {
+    if (!soundRef.current) return;
 
-      if (isCarHeadUnit || isNetworkSuitableForStreaming()) {
-        try {
-          await sound.playAsync();
-          await showPlaybackNotification(true);
-          await savePlaybackState(true);
-          retryCountRef.current = 0;
-          provideFeedback('success');
-        } catch (playError) {
-          const errorMessage = 'Não foi possível iniciar a reprodução. Verifique sua conexão e tente novamente.';
-          setInitialLoadError(errorMessage);
-          logError('PLAYBACK', playError, 'setupAudio');
-          provideFeedback('error');
-          retryPlayback();
+    try {
+      if (isPlaying) {
+        await soundRef.current.pauseAsync();
+        setIsPlaying(false);
+        await updateForegroundNotification();
+        await savePlaybackState(false);
+        if (updateIntervalRef.current) {
+          clearInterval(updateIntervalRef.current);
+          updateIntervalRef.current = null;
         }
       } else {
-        const errorMessage = 'Conexão de rede instável. Aguarde uma conexão melhor para ouvir a rádio.';
-        setInitialLoadError(errorMessage);
-        logError('NETWORK', errorMessage, 'setupAudio');
-        provideFeedback('warning');
+        // Verificar estado do player antes de tocar
+        const status = await soundRef.current.getStatusAsync();
+        if (!status.isLoaded) {
+          await setupAudio();
+          return;
+        }
+
+        await soundRef.current.playAsync();
+        setIsPlaying(true);
+        await updateForegroundNotification();
+        await savePlaybackState(true);
+        updateIntervalRef.current = setInterval(() => {
+          if (soundRef.current) {
+            soundRef.current.getStatusAsync();
+          }
+        }, appStateRef.current === 'active' ? FOREGROUND_UPDATE_INTERVAL : BACKGROUND_UPDATE_INTERVAL);
       }
     } catch (error) {
-      logError('UNKNOWN', error, 'setupAudio');
+      logError('PLAYBACK', error, 'togglePlayback');
       handleError(error instanceof Error ? error.message : 'Erro desconhecido');
       provideFeedback('error');
       retryPlayback();
     }
-  }, [isNetworkSuitableForStreaming, updateStatus, handleError, retryPlayback, logError, provideFeedback]);
+  }, [isPlaying, handleError, retryPlayback, logError, provideFeedback, setupAudio, updateForegroundNotification]);
+
+  // Adiciona listener para o botão da notificação
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const handleButtonPress = () => {
+        togglePlayback();
+      };
+
+      ForegroundService.onButtonPress(handleButtonPress);
+
+      return () => {
+        ForegroundService.offButtonPress(handleButtonPress);
+      };
+    }
+  }, [togglePlayback]);
+
+  // Atualiza a notificação quando o estado de reprodução muda
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      updateForegroundNotification();
+    }
+  }, [isPlaying, updateForegroundNotification]);
 
   // Detectar se está rodando em uma central multimídia
   useEffect(() => {
@@ -361,44 +383,6 @@ export const useAudioPlayer = () => {
 
     detectCarHeadUnit();
   }, []);
-
-  // Otimizar toggle de reprodução
-  const togglePlayback = useCallback(async () => {
-    if (!soundRef.current) return;
-
-    try {
-      if (isPlaying) {
-        await soundRef.current.pauseAsync();
-        await showPlaybackNotification(false);
-        await savePlaybackState(false);
-        if (updateIntervalRef.current) {
-          clearInterval(updateIntervalRef.current);
-          updateIntervalRef.current = null;
-        }
-      } else {
-        // Verificar estado do player antes de tocar
-        const status = await soundRef.current.getStatusAsync();
-        if (!status.isLoaded) {
-          await setupAudio();
-          return;
-        }
-
-        await soundRef.current.playAsync();
-        await showPlaybackNotification(true);
-        await savePlaybackState(true);
-        updateIntervalRef.current = setInterval(() => {
-          if (soundRef.current) {
-            soundRef.current.getStatusAsync();
-          }
-        }, appStateRef.current === 'active' ? FOREGROUND_UPDATE_INTERVAL : BACKGROUND_UPDATE_INTERVAL);
-      }
-    } catch (error) {
-      logError('PLAYBACK', error, 'togglePlayback');
-      handleError(error instanceof Error ? error.message : 'Erro desconhecido');
-      provideFeedback('error');
-      retryPlayback();
-    }
-  }, [isPlaying, handleError, retryPlayback, logError, provideFeedback, setupAudio]);
 
   const onPlaybackStatusUpdate = (status: any) => {
     if (!status.isLoaded) {
@@ -491,27 +475,14 @@ export const useAudioPlayer = () => {
   // Cleanup otimizado
   useEffect(() => {
     return () => {
-      const cleanup = async () => {
-        if (soundRef.current) {
-          try {
-            await soundRef.current.stopAsync();
-            await soundRef.current.unloadAsync();
-          } catch (error) {
-            logError('PLAYBACK', error, 'cleanup');
-          }
-          soundRef.current = null;
-        }
-        if (updateIntervalRef.current) {
-          clearInterval(updateIntervalRef.current);
-          updateIntervalRef.current = null;
-        }
-        if (Platform.OS === 'android') {
-          await Notifications.dismissAllNotificationsAsync();
-        }
-      };
-      cleanup();
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+      if (Platform.OS === 'android') {
+        ForegroundService.stopService();
+      }
     };
-  }, [logError]);
+  }, []);
 
   // Memoize valores retornados para evitar re-renders
   return useMemo(() => ({

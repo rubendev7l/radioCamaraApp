@@ -31,10 +31,10 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
 import { Platform, AppState } from 'react-native';
 import { RADIO_CONFIG } from '../constants/radio';
+import { ForegroundService } from '../services/ForegroundService';
 
 const CHECK_INTERVAL = 30000; // 30 segundos
 
@@ -55,14 +55,7 @@ export const useStreamMonitor = () => {
       await sound.unloadAsync();
 
       if (lastStatus.current === 'offline') {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'Rádio Câmara',
-            body: 'A transmissão voltou ao ar! Você já pode ouvir a rádio.',
-            sound: true,
-          },
-          trigger: null,
-        });
+        await ForegroundService.startService(true);
         lastStatus.current = 'online';
         setStreamError(null);
       }
@@ -72,14 +65,7 @@ export const useStreamMonitor = () => {
       setStreamError(errorMessage);
       
       if (lastStatus.current === 'online') {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'Rádio Câmara',
-            body: errorMessage,
-            sound: true,
-          },
-          trigger: null,
-        });
+        await ForegroundService.startService(false);
         lastStatus.current = 'offline';
       }
       setIsStreamOnline(false);
@@ -87,14 +73,8 @@ export const useStreamMonitor = () => {
   };
 
   useEffect(() => {
-    // Configurar notificações
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
+    // Inicializar o serviço de notificações
+    ForegroundService.initialize();
 
     // Monitorar estado do app
     const subscription = AppState.addEventListener('change', nextAppState => {

@@ -10,7 +10,6 @@
     },
     "types": [
       "node",
-      "jest",
       "react",
       "react-native"
     ],
