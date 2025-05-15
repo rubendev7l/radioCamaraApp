@@ -268,7 +268,7 @@ export const useAudioPlayer = () => {
       if (!canPlay || !isNetworkSuitableForStreaming) {
         throw new Error('Condições não adequadas para reprodução');
       }
-
+      
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
@@ -279,7 +279,7 @@ export const useAudioPlayer = () => {
       });
 
       if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+          await soundRef.current.unloadAsync();
       }
 
       const { sound } = await Audio.Sound.createAsync(
@@ -291,10 +291,10 @@ export const useAudioPlayer = () => {
       soundRef.current = sound;
       setIsPlaying(true);
       await startForegroundService();
-      provideFeedback('success');
+          provideFeedback('success');
     } catch (error) {
       logError('PLAYBACK', error, 'setupAudio');
-      provideFeedback('error');
+          provideFeedback('error');
       throw error;
     }
   }, [canPlay, isNetworkSuitableForStreaming, logError, provideFeedback, startForegroundService]);
@@ -475,12 +475,12 @@ export const useAudioPlayer = () => {
   // Cleanup otimizado
   useEffect(() => {
     return () => {
-      if (soundRef.current) {
+        if (soundRef.current) {
         soundRef.current.unloadAsync();
-      }
-      if (Platform.OS === 'android') {
+        }
+        if (Platform.OS === 'android') {
         ForegroundService.stopService();
-      }
+        }
     };
   }, []);
 

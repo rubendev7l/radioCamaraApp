@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rádio Câmara Sete Lagoas",
     "slug": "radiocamarasetelagoas",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -28,9 +28,6 @@
         "UIBackgroundModes": [
           "audio",
           "fetch",
-          "remote-notification",
-          "audio",
-          "fetch",
           "remote-notification"
         ],
         "NSMicrophoneUsageDescription": "Este app não requer acesso ao microfone",
@@ -51,18 +48,13 @@
       "permissions": [
         "FOREGROUND_SERVICE",
         "WAKE_LOCK",
-        "MODIFY_AUDIO_SETTINGS",
         "INTERNET",
         "ACCESS_NETWORK_STATE",
-        "RECEIVE_BOOT_COMPLETED",
         "POST_NOTIFICATIONS",
-        "BLUETOOTH",
-        "BLUETOOTH_ADMIN",
         "BLUETOOTH_CONNECT",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
-      "softwareKeyboardLayoutMode": "pan",
+      "softwareKeyboardLayoutMode": "resize",
       "allowBackup": true
     },
     "web": {

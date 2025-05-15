@@ -55,6 +55,8 @@ import * as Haptics from 'expo-haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { ForegroundService } from '../services/ForegroundService';
 import { showBatteryOptimizationAlert } from './showBatteryOptimizationAlert';
+import { RADIO_CONFIG } from '../constants/radio';
+import { usePermissions } from '../hooks/usePermissions';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -67,6 +69,14 @@ interface RadioStation {
   description?: string;
 }
 
+// Estação padrão da Rádio Câmara
+const defaultStation: RadioStation = {
+  id: 'radio-camara',
+  name: 'Rádio Câmara Sete Lagoas',
+  streamUrl: RADIO_CONFIG.STREAM_URL,
+  description: 'A voz do legislativo de Sete Lagoas'
+};
+
 /** Props do componente principal do player de rádio */
 interface RadioPlayerProps {
   currentStation: RadioStation;
@@ -74,6 +84,7 @@ interface RadioPlayerProps {
 }
 
 export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
+  const { hasPermissions, requestPermissions } = usePermissions();
   const { width, height } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
 
@@ -185,6 +196,12 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     loadNotificationSettings();
   }, []);
 
+  useEffect(() => {
+    if (!hasPermissions) {
+      requestPermissions();
+    }
+  }, [hasPermissions]);
+
   const loadNotificationSettings = async () => {
     try {
       const settings = await AsyncStorage.getItem('notificationSettings');
@@ -209,8 +226,20 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       });
 
       const { sound } = await Audio.Sound.createAsync(
-        { uri: currentStation.streamUrl },
-        { shouldPlay: false }
+        { 
+          uri: RADIO_CONFIG.STREAM_URL,
+          headers: {
+            'User-Agent': 'RadioCamaraApp/1.0',
+          }
+        },
+        { 
+          shouldPlay: false,
+          progressUpdateIntervalMillis: 100,
+          positionMillis: 0,
+          volume: 1.0,
+          rate: 1.0,
+          shouldCorrectPitch: true,
+        }
       );
       soundRef.current = sound;
 

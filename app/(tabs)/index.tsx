@@ -1,6 +1,6 @@
 // app/tabs/index.tsx
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Image, StatusBar, SafeAreaView, BackHandler, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Image, StatusBar, SafeAreaView, BackHandler, TouchableOpacity, Alert, useWindowDimensions } from 'react-native';
 import { RadioPlayer } from '../../components/RadioPlayer';
 import { RADIO_CONFIG } from '../../constants/radio';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,8 @@ function useOtaUpdateNotifier() {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width, height } = useWindowDimensions();
+  const isSmallScreen = width < 360;
   useOtaUpdateNotifier();
   
   const handleExit = () => {
@@ -41,14 +43,24 @@ export default function HomeScreen() {
         resizeMode="cover"
       />
       <TouchableOpacity
-        style={styles.helpIcon}
+        style={[
+          styles.helpIcon,
+          isSmallScreen && styles.helpIconSmall
+        ]}
         onPress={() => router.push('/help')}
         accessibilityLabel="Ajuda"
         accessibilityRole="button"
       >
-        <Ionicons name="help-circle-outline" size={28} color="#007AFF" />
+        <Ionicons 
+          name="help-circle-outline" 
+          size={isSmallScreen ? 24 : 28} 
+          color="#007AFF" 
+        />
       </TouchableOpacity>
-      <View style={styles.contentContainer}>
+      <View style={[
+        styles.contentContainer,
+        isSmallScreen && styles.contentContainerSmall
+      ]}>
         <RadioPlayer 
           currentStation={{
             id: 'radio-camara-sete-lagoas',
@@ -81,6 +93,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
   },
+  contentContainerSmall: {
+    margin: 12,
+  },
   helpIcon: {
     position: 'absolute',
     top: 48,
@@ -94,5 +109,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
+  },
+  helpIconSmall: {
+    top: 40,
+    right: 12,
+    borderRadius: 16,
+    padding: 3,
   },
 });

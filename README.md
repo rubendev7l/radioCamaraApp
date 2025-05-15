@@ -1,106 +1,156 @@
-# Rádio Câmara Sete Lagoas
+# 📻 Rádio Câmara Sete Lagoas
 
-Aplicativo oficial da Rádio Câmara Sete Lagoas, desenvolvido para proporcionar acesso fácil e rápido às transmissões ao vivo da Câmara Municipal.
+<div align="center">
+  <img src="assets/images/icon.png" alt="Logo Rádio Câmara" width="200"/>
+  
+  [![Expo](https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev)
+  [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+  [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+</div>
 
-## 🚀 Funcionalidades
+## 🎯 Sobre o Projeto
 
-- **Transmissão Ao Vivo**: Acompanhe as sessões legislativas em tempo real
-- **Controle de Áudio**: Play/Pause e controle de volume
-- **Notificações**: Receba alertas sobre status da rádio
-- **Controles na Tela de Bloqueio**: Controle a reprodução sem abrir o app
-- **Interação**: Envie mensagens e solicite músicas via WhatsApp
-- **Acessibilidade**: Interface adaptativa para modo claro/escuro
-- **Suporte Técnico**: Canal direto para reportar problemas
+Aplicativo oficial da Rádio Câmara Sete Lagoas, desenvolvido para proporcionar acesso fácil e rápido às transmissões ao vivo das sessões legislativas e programas institucionais da Câmara Municipal.
 
-## 📱 Tecnologias Utilizadas
+### 📱 Versão Atual
+- **Versão**: 1.0.2
+- **Version Code**: 7
+- **Última Atualização**: 15/05/2025
 
-- **Expo**: Framework para desenvolvimento mobile
-- **React Native**: Biblioteca para construção de interfaces
-- **TypeScript**: Linguagem para tipagem estática
-- **Expo AV**: Para streaming e controles de mídia
-- **React Navigation**: Para navegação entre telas
-- **React Native Reanimated**: Para animações
+## ✨ Funcionalidades
 
-## 🛠️ Configuração do Ambiente
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="assets/images/features/live.png" width="100"/>
+        <br/>
+        <b>Transmissão Ao Vivo</b>
+      </td>
+      <td align="center">
+        <img src="assets/images/features/background.png" width="100"/>
+        <br/>
+        <b>Reprodução em Background</b>
+      </td>
+      <td align="center">
+        <img src="assets/images/features/notifications.png" width="100"/>
+        <br/>
+        <b>Notificações</b>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="assets/images/features/controls.png" width="100"/>
+        <br/>
+        <b>Controles de Áudio</b>
+      </td>
+      <td align="center">
+        <img src="assets/images/features/accessibility.png" width="100"/>
+        <br/>
+        <b>Acessibilidade</b>
+      </td>
+      <td align="center">
+        <img src="assets/images/features/support.png" width="100"/>
+        <br/>
+        <b>Suporte Técnico</b>
+      </td>
+    </tr>
+  </table>
+</div>
 
-1. **Pré-requisitos**
-   - Node.js (versão 14 ou superior)
-   - npm ou yarn
-   - Expo CLI
-   - Android Studio (para build nativo)
+## 🛠️ Tecnologias
 
-2. **Instalação**
-   ```bash
-   # Clone o repositório
-   git clone https://github.com/seu-usuario/radio-camara-sete-lagoas.git
+- **Expo SDK 52**
+- **React Native 0.76.9**
+- **TypeScript 5.3.0**
+- **Expo AV** (Streaming)
+- **React Navigation** (Navegação)
+- **React Native Reanimated** (Animações)
 
-   # Instale as dependências
-   npm install
-   # ou
-   yarn install
-   ```
+## 🚀 Começando
 
-3. **Executando o Projeto**
-   ```bash
-   # Inicie o app
-   npx expo start
-   ```
+### Pré-requisitos
+- Node.js 18.x ou superior
+- npm 9.x ou superior
+- Expo CLI
+- Android Studio (para build nativo)
+
+### Instalação
+
+```bash
+# Clone o repositório
+git clone https://github.com/cm7/radio-camara-sete-lagoas.git
+
+# Instale as dependências
+npm install
+
+# Inicie o app
+npx expo start
+```
+
+## 📱 Screenshots
+
+<div align="center">
+  <img src="assets/images/screenshots/home.png" width="200"/>
+  <img src="assets/images/screenshots/player.png" width="200"/>
+  <img src="assets/images/screenshots/help.png" width="200"/>
+</div>
 
 ## 📦 Estrutura do Projeto
 
 ```
 radio-camara-app/
-├── app/                 # Rotas e telas do aplicativo
-├── assets/             # Recursos estáticos (imagens, fontes)
-├── components/         # Componentes reutilizáveis
-├── constants/          # Constantes e configurações
-├── context/           # Contextos do React
-└── utils/             # Funções utilitárias
+├── app/                    # Rotas e telas (expo-router)
+├── components/            # Componentes UI
+├── hooks/                # Hooks personalizados
+├── context/             # Contextos React
+├── constants/           # Configurações
+├── types/              # Definições de tipos
+└── assets/            # Recursos estáticos
 ```
 
 ## 📚 Documentação
 
 Para informações técnicas detalhadas, consulte o arquivo [DOCUMENTACAO.md](./DOCUMENTACAO.md) que contém:
-
-- Versões das dependências
 - Configurações técnicas
 - Processos de build
-- Configurações de áudio
-- Configurações de notificações
-- Otimizações de performance
+- Otimizações
 - Limitações conhecidas
-- E muito mais!
 
 ## ⚠️ Importante
 
-NUNCA altere estes elementos, pois podem causar conflitos sérios:
-
-1. **Package Name** (`com.cm7.radiocamara`):
-   - É o identificador único do app
-   - Se mudar, será considerado um app novo
-   - Perderá todas as avaliações e downloads
-
-2. **Chave de Assinatura** (Keystore):
-   - A chave que o EAS gerou
-   - Se perder, não poderá mais atualizar o app
-   - Guarde o `credentials.json` gerado pelo EAS
-
-3. **Version Code** (no `app.json`):
-   - Sempre deve ser maior que o anterior
-   - Nunca deve ser menor
-   - Nunca deve repetir
+NUNCA altere estes elementos:
+1. **Package Name**: `com.cm7.radiocamara`
+2. **Chave de Assinatura**: Gerada pelo EAS
+3. **Version Code**: Sempre incrementar
 
 ## 📞 Suporte
 
-Para suporte técnico, entre em contato:
-- E-mail: rodrigo.cpd@camarasete.mg.gov.br
-- WhatsApp: (31) 98634-0773 (Rádio)
-- Horário: Segunda a Sexta, 8h às 17h
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <b>E-mail</b><br/>
+        rodrigo.cpd@camarasete.mg.gov.br
+      </td>
+      <td align="center">
+        <b>WhatsApp</b><br/>
+        (31) 98634-0773
+      </td>
+      <td align="center">
+        <b>Horário</b><br/>
+        Segunda a Sexta<br/>
+        8h às 17h
+      </td>
+    </tr>
+  </table>
+</div>
 
-## 📱 Links Úteis
+## 🔗 Links Úteis
 
 - [Site Oficial da Câmara](https://www.camarasete.mg.gov.br)
-- [Play Store](link-para-play-store)
+- [Play Store](link-para-play-store) (em breve)
 - [Documentação Expo](https://docs.expo.dev)
 - [Documentação Expo AV](https://docs.expo.dev/versions/latest/sdk/audio/)
 
@@ -110,4 +160,12 @@ Este projeto está sob a licença [MIT](LICENSE).
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Por favor, leia as diretrizes de contribuição antes de enviar um pull request. 
+Contribuições são bem-vindas! Por favor, leia as diretrizes de contribuição antes de enviar um pull request.
+
+---
+
+<div align="center">
+  <img src="assets/images/camara-logo.png" alt="Logo Câmara" width="150"/>
+  <br/>
+  <sub>Desenvolvido com ❤️ pela equipe de TI da Câmara Municipal de Sete Lagoas</sub>
+</div> 

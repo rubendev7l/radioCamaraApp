@@ -17,6 +17,10 @@ Notifications.setNotificationHandler({
 export const ForegroundService = {
   async initialize() {
     try {
+      // Inicializar configurações de notificação
+      const defaultSettings = { playback: true };
+      await AsyncStorage.setItem('notificationSettings', JSON.stringify(defaultSettings));
+
       if (Platform.OS === 'android') {
         console.log('[ForegroundService] Inicializando canal de notificação');
         await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
@@ -42,14 +46,15 @@ export const ForegroundService = {
   async startService(isPlaying: boolean = true) {
     try {
       console.log('[ForegroundService] startService chamado, isPlaying:', isPlaying);
+      
       // Verificar se as notificações estão habilitadas
       const settings = await AsyncStorage.getItem('notificationSettings');
       if (!settings) {
-        console.log('[ForegroundService] Notificações não configuradas. Abortando.');
-        return;
+        // Se não existir configuração, criar uma padrão
+        await this.initialize();
       }
 
-      const { playback } = JSON.parse(settings);
+      const { playback } = JSON.parse(settings || '{"playback": true}');
       if (!playback) {
         console.log('[ForegroundService] Notificações desativadas pelo usuário. Parando serviço.');
         await this.stopService();
