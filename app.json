@@ -47,7 +47,7 @@
         "backgroundImage": "./assets/images/icon-background.png"
       },
       "package": "com.cm7.radiocamara",
-      "versionCode": 5,
+      "versionCode": 7,
       "permissions": [
         "FOREGROUND_SERVICE",
         "WAKE_LOCK",

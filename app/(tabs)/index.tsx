@@ -7,12 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Updates from 'expo-updates';
-import { UpdatesStateEventType } from 'expo-updates';
 
 function useOtaUpdateNotifier() {
   useEffect(() => {
-    const subscription = Updates.addUpdatesStateChangeListener((event) => {
-      if (event.state === 'finished') {
+    const subscription = Updates.addUpdatesStateChangeListener((event: any) => {
+      if (event.type === 'updateFinished') {
         Alert.alert('Atualização', 'O app foi atualizado! Aproveite as novidades.');
       }
     });
