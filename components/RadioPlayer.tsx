@@ -198,7 +198,21 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
   useEffect(() => {
     if (!hasPermissions) {
-      requestPermissions();
+      Alert.alert(
+        'Permissões Necessárias',
+        'Para que o aplicativo funcione corretamente, precisamos das seguintes permissões:\n\n' +
+        '• Internet\n' +
+        '• Notificações\n' +
+        '• Serviço em primeiro plano\n\n' +
+        'Por favor, conceda todas as permissões solicitadas.',
+        [
+          {
+            text: 'OK',
+            onPress: requestPermissions,
+          },
+        ],
+        { cancelable: false }
+      );
     }
   }, [hasPermissions]);
 
@@ -219,12 +233,21 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    * Habilita reprodução em background e monitora status
    */
   const setupAudio = async () => {
-    try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-      });
+    if (!hasPermissions) {
+      console.log('Permissões não concedidas, aguardando...');
+      return;
+    }
 
+    try {
+      console.log('Configurando modo de áudio...');
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+      });
+      console.log('Modo de áudio configurado com sucesso');
+
+      console.log('Criando instância do player...');
       const { sound } = await Audio.Sound.createAsync(
         { 
           uri: RADIO_CONFIG.STREAM_URL,
@@ -239,39 +262,30 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
           volume: 1.0,
           rate: 1.0,
           shouldCorrectPitch: true,
+        },
+        (status) => {
+          console.log('Status do player:', status);
         }
       );
+      console.log('Instância do player criada com sucesso');
       soundRef.current = sound;
 
       sound.setOnPlaybackStatusUpdate((status) => {
+        console.log('Atualização de status:', status);
         if (status.isLoaded) {
           setIsPlaying(status.isPlaying);
           setHasError(false);
-
-          // Se está tocando, nunca mostra buffering
-          if (status.isPlaying) {
-            setIsBuffering(false);
-          } else if (status.isBuffering && status.shouldPlay) {
-            setIsBuffering(true);
-          } else {
-            setIsBuffering(false);
-          }
-        } else {
+          setIsBuffering(status.isBuffering);
+        } else if (status.error) {
+          console.error('Erro no player:', status.error);
           setHasError(true);
-          setIsBuffering(false);
-          showBatteryOptimizationAlert();
+          setIsPlaying(false);
         }
       });
 
-      if (Platform.OS === 'android') {
-        await sound.setVolumeAsync(1.0);
-        await sound.setIsMutedAsync(false);
-        await sound.setProgressUpdateIntervalAsync(100);
-      }
     } catch (error) {
-      console.error('Error setting up audio:', error);
+      console.error('Erro ao configurar áudio:', error);
       setHasError(true);
-      showBatteryOptimizationAlert();
     }
   };
 

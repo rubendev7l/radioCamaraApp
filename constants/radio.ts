@@ -37,7 +37,7 @@ export const RADIO_CONFIG = {
   /** Descrição da estação */
   STATION_DESCRIPTION: 'A voz do legislativo de Sete Lagoas',
   /** URL do stream de áudio */
-  STREAM_URL: 'https://camarasete.mg.gov.br/stream',
+  STREAM_URL: 'https://stream.zeno.fm/0r0a8mb2u5quv',
   /** Links para redes sociais */
   SOCIAL_MEDIA: {
     FACEBOOK: 'https://www.facebook.com/camaramunicipaldesetelagoas/',
