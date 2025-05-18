@@ -1,139 +1,140 @@
-import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import { COLORS } from '../constants/colors';
 
-const CHANNEL_ID = 'radio-playback';
-const NOTIFICATION_ID = 1;
+class ForegroundService {
+  private static instance: ForegroundService;
+  private notificationChannelId: string | null = null;
+  private currentNotificationId: string | null = null;
+  private isInitialized = false;
+  private notificationListener: Notifications.Subscription | null = null;
+  private hasPermissions = false;
 
-// Configurar o comportamento das notificações
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+  private constructor() {
+    this.setupNotificationListener();
+  }
 
-export const ForegroundService = {
-  async initialize() {
-    try {
-      // Inicializar configurações de notificação
-      const defaultSettings = { playback: true };
-      await AsyncStorage.setItem('notificationSettings', JSON.stringify(defaultSettings));
-
-      if (Platform.OS === 'android') {
-        console.log('[ForegroundService] Inicializando canal de notificação');
-        await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-          name: 'Rádio Câmara',
-          description: 'Serviço de streaming da Rádio Câmara',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0],
-          lightColor: '#FF231F7C',
-          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-          bypassDnd: true,
-          sound: null,
-          enableLights: true,
-          enableVibrate: false,
-          showBadge: true,
-        });
-        console.log('[ForegroundService] Canal de notificação inicializado');
-      }
-    } catch (error) {
-      console.error('[ForegroundService] Erro ao inicializar o canal de notificação:', error);
+  public static getInstance(): ForegroundService {
+    if (!ForegroundService.instance) {
+      ForegroundService.instance = new ForegroundService();
     }
-  },
+    return ForegroundService.instance;
+  }
 
-  async startService(isPlaying: boolean = true) {
-    try {
-      console.log('[ForegroundService] startService chamado, isPlaying:', isPlaying);
-      
-      // Verificar se as notificações estão habilitadas
-      const settings = await AsyncStorage.getItem('notificationSettings');
-      if (!settings) {
-        // Se não existir configuração, criar uma padrão
-        await this.initialize();
+  private setupNotificationListener() {
+    if (this.notificationListener) {
+      this.notificationListener.remove();
+    }
+
+    this.notificationListener = Notifications.addNotificationResponseReceivedListener((response) => {
+      if (response.notification.request.content.data.type === 'playback') {
+        if (Platform.OS === 'android') {
+          const { NativeEventEmitter } = require('react-native');
+          const eventEmitter = new NativeEventEmitter();
+          eventEmitter.emit('notificationPlaybackToggle');
+        }
       }
+    });
+  }
 
-      const { playback } = JSON.parse(settings || '{"playback": true}');
-      if (!playback) {
-        console.log('[ForegroundService] Notificações desativadas pelo usuário. Parando serviço.');
-        await this.stopService();
+  async initialize() {
+    if (this.isInitialized) return;
+
+    try {
+      // Verificar permissões antes de inicializar
+      const { status } = await Notifications.getPermissionsAsync();
+      this.hasPermissions = status === 'granted';
+
+      if (!this.hasPermissions) {
+        console.log('ForegroundService: Sem permissões de notificação');
         return;
       }
 
-      await Notifications.dismissAllNotificationsAsync();
+      if (Platform.OS === 'android') {
+        const channel = await Notifications.setNotificationChannelAsync('radio-playback', {
+          name: 'Reprodução da Rádio',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: COLORS.PRIMARY,
+          enableVibrate: true,
+          enableLights: true,
+          showBadge: true,
+        });
+        this.notificationChannelId = channel?.id || null;
+      }
 
-      const notificationContent = {
-        title: 'Rádio Câmara Sete Lagoas',
-        body: isPlaying ? '🎵 Tocando agora' : '⏸️ Pausado',
-        data: { isPlaying },
-        android: {
-          channelId: CHANNEL_ID,
-          priority: 'high',
-          sticky: true,
-          icon: './assets/images/notification-icon.png',
-          color: '#FF231F7C',
-          actions: [
-            {
-              title: isPlaying ? '⏸️ Pausar' : '▶️ Tocar',
-              pressAction: {
-                id: 'TOGGLE_PLAYBACK',
-              },
-              icon: isPlaying ? 'pause' : 'play',
-            },
-            {
-              title: '❌ Fechar',
-              pressAction: {
-                id: 'STOP',
-              },
-              icon: 'close',
-            },
-          ],
-          importance: 'high',
-          visibility: 'public',
-          showWhen: true,
-          autoCancel: false,
-          ongoing: true,
-          fullScreenIntent: true,
-          category: 'call',
-        },
-      };
-
-      await Notifications.scheduleNotificationAsync({
-        content: notificationContent,
-        trigger: null,
-        identifier: String(NOTIFICATION_ID),
+      // Configurar o comportamento das notificações
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        }),
       });
-      console.log('[ForegroundService] Notificação agendada/atualizada');
+
+      this.isInitialized = true;
+      console.log('ForegroundService inicializado com sucesso');
     } catch (error) {
-      console.error('[ForegroundService] Erro ao iniciar o serviço em primeiro plano:', error);
+      console.error('Erro ao inicializar ForegroundService:', error);
+      throw error;
     }
-  },
+  }
 
   async updateNotification(isPlaying: boolean) {
     try {
-      console.log('[ForegroundService] updateNotification chamado, isPlaying:', isPlaying);
-      await this.startService(isPlaying);
+      // Verificar permissões
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('ForegroundService: Sem permissões para notificação');
+        return;
+      }
+
+      // Remover notificação anterior
+      if (this.currentNotificationId) {
+        await Notifications.dismissNotificationAsync(this.currentNotificationId);
+        this.currentNotificationId = null;
+      }
+
+      // Criar nova notificação
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Rádio Câmara Sete Lagoas',
+          body: isPlaying ? 'Tocando agora' : 'Pausado',
+          data: { type: 'playback' },
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          vibrate: [0, 250, 250, 250],
+          sticky: true,
+          autoDismiss: false,
+          sound: true,
+        },
+        trigger: null,
+      });
+
+      this.currentNotificationId = notificationId;
+      console.log('Notificação atualizada:', isPlaying ? 'Tocando' : 'Pausado', 'ID:', notificationId);
     } catch (error) {
-      console.error('[ForegroundService] Erro ao atualizar a notificação:', error);
+      console.error('Erro ao atualizar notificação:', error);
     }
-  },
-
-  async stopService() {
-    try {
-      console.log('[ForegroundService] stopService chamado');
-      await Notifications.dismissAllNotificationsAsync();
-      console.log('[ForegroundService] Notificações removidas');
-    } catch (error) {
-      console.error('[ForegroundService] Erro ao parar o serviço em primeiro plano:', error);
-    }
-  },
-
-  onButtonPress(handler: (response: Notifications.NotificationResponse) => void) {
-    return Notifications.addNotificationResponseReceivedListener(handler);
-  },
-
-  offButtonPress(subscription: { remove: () => void }) {
-    subscription.remove();
   }
-};
+
+  async stopNotification() {
+    if (!this.hasPermissions) {
+      console.log('ForegroundService: Sem permissões para remover notificação');
+      return;
+    }
+
+    if (this.currentNotificationId) {
+      try {
+        await Notifications.dismissNotificationAsync(this.currentNotificationId);
+        this.currentNotificationId = null;
+        console.log('Notificação removida');
+      } catch (error) {
+        console.error('Erro ao remover notificação:', error);
+        throw error;
+      }
+    }
+  }
+}
+
+export default ForegroundService.getInstance();

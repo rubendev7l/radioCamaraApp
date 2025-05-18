@@ -25,7 +25,7 @@
  * @version 1.0.0
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -45,6 +45,7 @@ import {
   Share,
   UIManager,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -53,10 +54,12 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { ForegroundService } from '../services/ForegroundService';
+import ForegroundService from '../services/ForegroundService';
 import { showBatteryOptimizationAlert } from './showBatteryOptimizationAlert';
 import { RADIO_CONFIG } from '../constants/radio';
 import { usePermissions } from '../hooks/usePermissions';
+import PlayerControls from './player/PlayerControls';
+import PlayerStatus from './player/PlayerStatus';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -83,6 +86,13 @@ interface RadioPlayerProps {
   onExit: () => void;
 }
 
+interface PlaybackStatus {
+  isLoaded: boolean;
+  isPlaying?: boolean;
+  isBuffering?: boolean;
+  error?: string;
+}
+
 export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   const { hasPermissions, requestPermissions } = usePermissions();
   const { width, height } = useWindowDimensions();
@@ -90,10 +100,11 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
   /** Estados principais para controle da reprodução */
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState as AppStateStatus);
+  const isInitializedRef = useRef(false);
 
   /** 
    * Animação do indicador "AO VIVO"
@@ -110,10 +121,11 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   const descriptionTranslateY = useRef(new Animated.Value(20)).current;
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [isBuffering, setIsBuffering] = useState(false);
 
   const { isConnected, isInternetReachable } = useNetworkStatus();
   const [isReconnecting, setIsReconnecting] = useState(false);
+
+  const [isMuted, setIsMuted] = useState(false);
 
   /** 
    * Efeito que controla a animação do indicador "AO VIVO"
@@ -157,151 +169,207 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   }, [isPlaying]);
 
   /** 
-   * Efeito que controla as notificações
-   * Atualiza a notificação quando o estado de reprodução muda
-   */
-  useEffect(() => {
-    if (notificationsEnabled) {
-      updateNotification();
-    }
-  }, [isPlaying, notificationsEnabled]);
-
-  /** 
    * Efeito de inicialização do player
    * Configura o áudio, notificações e listeners de estado do app
    */
   useEffect(() => {
-    let notificationCleanup: (() => void) | undefined;
+    const initializeApp = async () => {
+      try {
+        // Primeiro configura o áudio apenas uma vez
+        if (!isInitializedRef.current) {
+          console.log('Configurando modo de áudio...');
+          await setupAudio();
+          console.log('Modo de áudio configurado com sucesso');
+        }
 
-    const setup = async () => {
-      await setupAudio();
-      notificationCleanup = await setupNotifications();
+        // Depois verifica permissões
+        if (!hasPermissions) {
+          console.log('Solicitando permissões iniciais...');
+          const granted = await requestPermissions();
+          console.log('Resultado da solicitação inicial:', granted);
+          
+          if (granted) {
+            setNotificationsEnabled(true);
+            await AsyncStorage.setItem('notificationSettings', JSON.stringify({ playback: true }));
+            await ForegroundService.initialize();
+          }
+        }
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+      }
     };
 
-    setup();
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-      subscription.remove();
-      if (notificationCleanup) {
-        notificationCleanup();
-      }
-    };
+    initializeApp();
   }, []);
 
-  useEffect(() => {
-    loadNotificationSettings();
-  }, []);
-
-  useEffect(() => {
-    if (!hasPermissions) {
-      Alert.alert(
-        'Permissões Necessárias',
-        'Para que o aplicativo funcione corretamente, precisamos das seguintes permissões:\n\n' +
-        '• Internet\n' +
-        '• Notificações\n' +
-        '• Serviço em primeiro plano\n\n' +
-        'Por favor, conceda todas as permissões solicitadas.',
-        [
-          {
-            text: 'OK',
-            onPress: requestPermissions,
-          },
-        ],
-        { cancelable: false }
-      );
-    }
-  }, [hasPermissions]);
-
-  const loadNotificationSettings = async () => {
+  const setupAudio = useCallback(async () => {
     try {
-      const settings = await AsyncStorage.getItem('notificationSettings');
-      if (settings) {
-        const parsedSettings = JSON.parse(settings);
-        setNotificationsEnabled(parsedSettings.playback);
+      if (isInitializedRef.current) {
+        return;
       }
-    } catch (error) {
-      console.error('Error loading notification settings:', error);
-    }
-  };
 
-  /** 
-   * Configura o player de áudio
-   * Habilita reprodução em background e monitora status
-   */
-  const setupAudio = async () => {
-    if (!hasPermissions) {
-      console.log('Permissões não concedidas, aguardando...');
-      return;
-    }
-
-    try {
       console.log('Configurando modo de áudio...');
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+        interruptionModeAndroid: 1,
+        interruptionModeIOS: 1,
       });
       console.log('Modo de áudio configurado com sucesso');
-
-      console.log('Criando instância do player...');
-      const { sound } = await Audio.Sound.createAsync(
-        { 
-          uri: RADIO_CONFIG.STREAM_URL,
-          headers: {
-            'User-Agent': 'RadioCamaraApp/1.0',
-          }
-        },
-        { 
-          shouldPlay: false,
-          progressUpdateIntervalMillis: 100,
-          positionMillis: 0,
-          volume: 1.0,
-          rate: 1.0,
-          shouldCorrectPitch: true,
-        },
-        (status) => {
-          console.log('Status do player:', status);
-        }
-      );
-      console.log('Instância do player criada com sucesso');
-      soundRef.current = sound;
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        console.log('Atualização de status:', status);
-        if (status.isLoaded) {
-          setIsPlaying(status.isPlaying);
-          setHasError(false);
-          setIsBuffering(status.isBuffering);
-        } else if (status.error) {
-          console.error('Erro no player:', status.error);
-          setHasError(true);
-          setIsPlaying(false);
-        }
-      });
-
+      
+      isInitializedRef.current = true;
     } catch (error) {
       console.error('Erro ao configurar áudio:', error);
-      setHasError(true);
+      setError('Erro ao configurar áudio');
     }
-  };
+  }, []);
 
-  /** 
-   * Atualiza a notificação de acordo com o estado atual
-   */
-  const updateNotification = async () => {
+  const loadAndPlayAudio = useCallback(async () => {
     try {
-      if (!notificationsEnabled) {
-        await ForegroundService.stopService();
-        return;
+      if (!isInitializedRef.current) {
+        await setupAudio();
       }
 
-      await ForegroundService.startService(isPlaying);
+      if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          console.log('Player já está carregado, apenas iniciando...');
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+          setIsBuffering(false);
+          return;
+        }
+      }
+
+      setIsBuffering(true);
+      console.log('Criando nova instância do player...');
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: RADIO_CONFIG.STREAM_URL },
+        { shouldPlay: true },
+        onPlaybackStatusUpdate
+      );
+
+      soundRef.current = sound;
+      setIsPlaying(true);
+      setIsBuffering(false);
+      console.log('Stream iniciado com sucesso');
     } catch (error) {
-      console.error('Erro ao atualizar notificação:', error);
+      console.error('Erro ao iniciar stream:', error);
+      setError('Erro ao iniciar stream');
+      setIsPlaying(false);
+      setIsBuffering(false);
+    }
+  }, [setupAudio]);
+
+  const stopAudio = useCallback(async () => {
+    try {
+      if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          await soundRef.current.stopAsync();
+          await soundRef.current.unloadAsync();
+        }
+        soundRef.current = null;
+      }
+      setIsPlaying(false);
+      setIsBuffering(false);
+    } catch (error) {
+      console.error('Erro ao parar stream:', error);
+      setError('Erro ao parar stream');
+    }
+  }, []);
+
+  const onPlaybackStatusUpdate = useCallback((status: PlaybackStatus) => {
+    if (status.isLoaded) {
+      const wasPlaying = isPlaying;
+      const isNowPlaying = status.isPlaying || false;
+      
+      setIsBuffering(status.isBuffering || false);
+      setIsPlaying(isNowPlaying);
+      
+      // Verifica as configurações de notificação antes de atualizar
+      AsyncStorage.getItem('notificationSettings').then(settings => {
+        const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
+        if (wasPlaying !== isNowPlaying && notificationSettings.playback && hasPermissions) {
+          // Só atualiza a notificação se não houver erro
+          if (!status.error) {
+            ForegroundService.updateNotification(isNowPlaying);
+          }
+        }
+      });
+      
+      if (status.error) {
+        console.error('Erro no player:', status.error);
+        setError('Erro na reprodução');
+        setIsPlaying(false);
+        setIsBuffering(false);
+        // Remove a notificação em caso de erro
+        AsyncStorage.getItem('notificationSettings').then(settings => {
+          const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
+          if (notificationSettings.playback && hasPermissions) {
+            ForegroundService.updateNotification(false);
+          }
+        });
+      }
+    }
+  }, [isPlaying, hasPermissions]);
+
+  const togglePlayback = async () => {
+    try {
+      if (!hasPermissions) {
+        console.log('Solicitando permissões para reprodução...');
+        const granted = await requestPermissions();
+        if (!granted) {
+          Alert.alert(
+            'Permissão Necessária',
+            'Para manter a rádio tocando em segundo plano, você precisa permitir as notificações.',
+            [
+              {
+                text: 'Cancelar',
+                style: 'cancel',
+              },
+              {
+                text: 'Abrir Configurações',
+                onPress: () => Linking.openSettings(),
+              },
+            ]
+          );
+          return;
+        }
+        console.log('Permissões concedidas, ativando notificações...');
+        setNotificationsEnabled(true);
+        await AsyncStorage.setItem('notificationSettings', JSON.stringify({ playback: true }));
+        await ForegroundService.initialize();
+      }
+
+      // Verifica as configurações de notificação antes de atualizar
+      const settings = await AsyncStorage.getItem('notificationSettings');
+      const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
+      const shouldShowNotification = notificationSettings.playback;
+
+      if (isPlaying) {
+        console.log('Parando reprodução...');
+        await stopAudio();
+        if (shouldShowNotification && hasPermissions) {
+          await ForegroundService.updateNotification(false);
+        }
+      } else {
+        console.log('Iniciando reprodução...');
+        await loadAndPlayAudio();
+        // Só mostra a notificação se o stream foi carregado com sucesso
+        if (shouldShowNotification && hasPermissions && !error) {
+          await ForegroundService.updateNotification(true);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao alternar reprodução:', error);
+      setError('Erro ao alternar reprodução');
+      // Remove a notificação em caso de erro
+      if (hasPermissions) {
+        await ForegroundService.updateNotification(false);
+      }
     }
   };
 
@@ -310,32 +378,21 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    * Atualiza notificações conforme necessário
    */
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    // Verifica as configurações de notificação antes de atualizar
+    const settings = await AsyncStorage.getItem('notificationSettings');
+    const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
+    const shouldShowNotification = notificationSettings.playback;
+
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      if (isPlaying && notificationsEnabled) {
-        await updateNotification();
+      if (isPlaying && shouldShowNotification && hasPermissions && !error) {
+        await ForegroundService.updateNotification(true);
+      }
+    } else if (nextAppState.match(/inactive|background/)) {
+      if (isPlaying && shouldShowNotification && hasPermissions && !error) {
+        await ForegroundService.updateNotification(true);
       }
     }
     appState.current = nextAppState;
-  };
-
-  /** 
-   * Alterna entre reprodução e pausa
-   * Atualiza notificações e estado do player
-   */
-  const togglePlayback = async () => {
-    if (!soundRef.current) return;
-
-    try {
-      if (isPlaying) {
-        await soundRef.current.pauseAsync();
-      } else {
-        await soundRef.current.playAsync();
-      }
-    } catch (error) {
-      console.error('Error toggling playback:', error);
-      setHasError(true);
-      showBatteryOptimizationAlert();
-    }
   };
 
   /** 
@@ -346,8 +403,12 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     if (!soundRef.current) return;
 
     try {
-      await soundRef.current.setIsMutedAsync(!isMuted);
-      setIsMuted(!isMuted);
+      const status = await soundRef.current.getStatusAsync();
+      if (status.isLoaded) {
+        const newMuteState = !status.isMuted;
+        await soundRef.current.setIsMutedAsync(newMuteState);
+        setIsMuted(newMuteState);
+      }
     } catch (error) {
       console.error('Error toggling mute:', error);
     }
@@ -366,8 +427,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         soundRef.current = null;
       }
 
-      // Remove todas as notificações
-      await ForegroundService.stopService();
+      // Remove a notificação
+      await ForegroundService.stopNotification();
 
       // Libera recursos de áudio
       await Audio.setAudioModeAsync({
@@ -380,19 +441,13 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
       // Força o fechamento do app
       if (Platform.OS === 'android') {
-        // Força o fechamento imediato
         BackHandler.exitApp();
-        
-        // Se não fechar em 100ms, tenta novamente
-        setTimeout(() => {
-          BackHandler.exitApp();
-        }, 100);
       } else {
         onExit();
       }
     } catch (error) {
       console.error('Erro ao fechar o app:', error);
-      // Tenta fechar mesmo se houver erro
+      // Garante que o app será fechado mesmo em caso de erro
       if (Platform.OS === 'android') {
         BackHandler.exitApp();
       } else {
@@ -400,6 +455,19 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       }
     }
   };
+
+  /** 
+   * Efeito de limpeza ao desmontar o componente
+   */
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+      // Garante que a notificação é removida ao desmontar
+      ForegroundService.stopNotification();
+    };
+  }, []);
 
   /** 
    * Gerencia o processo de saída do app
@@ -430,7 +498,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
    * Reinicia o player e a reprodução
    */
   const handleReload = async () => {
-    setHasError(false);
+    setError(null);
     try {
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
@@ -441,8 +509,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       }
     } catch (error) {
       console.error('Error reloading:', error);
-      setHasError(true);
-      showBatteryOptimizationAlert();
+      setError('Erro ao recarregar');
     }
   };
 
@@ -478,33 +545,16 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         return () => {};
       }
 
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      if (finalStatus !== 'granted') {
-        console.log('Permissão para notificações não concedida');
-        return () => {};
-      }
-
       await ForegroundService.initialize();
 
-      // Configurar o listener para os botões da notificação
-      const subscription = ForegroundService.onButtonPress((response) => {
-        const actionId = response.actionIdentifier;
-        if (actionId === 'TOGGLE_PLAYBACK') {
+      const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        if (response.notification.request.content.data.type === 'playback') {
           togglePlayback();
-        } else if (actionId === 'STOP') {
-          handleExit();
         }
       });
 
       return () => {
-        ForegroundService.offButtonPress(subscription);
+        subscription.remove();
       };
     } catch (error) {
       console.error('Erro ao configurar notificações:', error);
@@ -532,11 +582,44 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
 
   // Reconexão automática quando a internet volta
   useEffect(() => {
-    if (hasError && isConnected && isInternetReachable) {
+    if (error && isConnected && isInternetReachable) {
       setIsReconnecting(true);
       handleReload().finally(() => setIsReconnecting(false));
     }
-  }, [hasError, isConnected, isInternetReachable]);
+  }, [error, isConnected, isInternetReachable]);
+
+  useEffect(() => {
+    setupAudio();
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+      ForegroundService.stopNotification();
+    };
+  }, [setupAudio]);
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isConnected) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isConnected]);
 
   /** 
    * Renderiza o player de rádio com layout responsivo
@@ -548,7 +631,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       style={styles.background}
       resizeMode="cover"
     >
-      {/** Container principal com layout responsivo */}
       <View style={[
         styles.content,
         isWeb && {
@@ -560,7 +642,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
           paddingHorizontal: Math.min(width * 0.05, 20),
         }
       ]}>
-        {/** Container interno com largura máxima para melhor legibilidade */}
         <View style={[
           styles.innerContent,
           isWeb && {
@@ -570,7 +651,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             justifyContent: 'center',
           }
         ]}>
-          {/** Descrição da estação com animação */}
           <Animated.Text 
             style={[
               styles.description,
@@ -587,7 +667,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             A voz do legislativo de Sete Lagoas
           </Animated.Text>
 
-          {/** Logo da rádio com tamanho responsivo */}
           <Image 
             source={require('../assets/images/logo-white.png')}
             style={[
@@ -595,33 +674,32 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               isWeb && {
                 width: Math.min(width * 0.4, 400),
                 height: Math.min(height * 0.3, 300),
-                marginBottom: 5,
+                marginBottom: Math.min(height * 0.02, 20),
               }
             ]}
             resizeMode="contain"
           />
           
-          {/** Container da onda de áudio com largura responsiva */}
           <View style={[
             styles.waveContainer,
             isWeb && {
               width: '100%',
               maxWidth: Math.min(width * 0.9, 800),
+              marginBottom: Math.min(height * 0.03, 30),
             }
           ]}>
             <AudioWave isPlaying={isPlaying} />
           </View>
         
-          {/** Controles de reprodução com layout responsivo */}
           <View style={[
             styles.controls,
             isWeb && {
               width: '100%',
               maxWidth: Math.min(width * 0.6, 600),
               justifyContent: 'center',
+              marginBottom: Math.min(height * 0.04, 40),
             }
           ]}>
-            {/** Botão de mudo com tamanho adaptativo */}
             <TouchableOpacity
               style={[
                 styles.controlButton,
@@ -632,12 +710,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
                   borderRadius: Math.min(width * 0.075, 40),
                 }
               ]}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.selectionAsync();
-                }
-                toggleMute();
-              }}
+              onPress={toggleMute}
               activeOpacity={0.7}
               accessibilityLabel={isMuted ? "Ativar som" : "Desativar som"}
               accessibilityRole="button"
@@ -649,7 +722,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               />
             </TouchableOpacity>
 
-            {/** Botão principal de play/pause com tamanho adaptativo */}
             <TouchableOpacity
               style={[
                 styles.playButton,
@@ -660,12 +732,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
                   borderRadius: Math.min(width * 0.1, 60),
                 }
               ]}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                }
-                togglePlayback();
-              }}
+              onPress={togglePlayback}
               activeOpacity={0.7}
               accessibilityLabel={isPlaying ? "Pausar" : "Tocar"}
               accessibilityRole="button"
@@ -677,7 +744,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               />
             </TouchableOpacity>
 
-            {/** Botão de compartilhar com tamanho adaptativo */}
             <TouchableOpacity
               style={[
                 styles.controlButton,
@@ -701,45 +767,68 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             </TouchableOpacity>
           </View>
 
-          {/** Container do status de transmissão */}
           <View style={[
             styles.statusWrapper,
             isWeb && {
-              marginTop: Math.min(height * 0.09, 60),
+              marginTop: Math.min(height * 0.04, 40),
+              marginBottom: Math.min(height * 0.04, 40),
             }
           ]}>
             <View style={styles.statusContainer}>
-              {isPlaying ? (
-                <View style={styles.liveContainer}>
-                  <Animated.View 
-                    style={[
-                      styles.liveDot,
-                      {
-                        transform: [{ scale: liveDotScale }],
-                        opacity: liveDotOpacity,
-                      }
-                    ]} 
-                  />
-                  <Text style={styles.liveText}>AO VIVO</Text>
-                </View>
-              ) : (
-                <Text style={styles.offlineText}>OFFLINE</Text>
-              )}
+              <PlayerStatus 
+                isPlaying={isPlaying} 
+                isBuffering={isBuffering} 
+                error={error} 
+              />
             </View>
           </View>
-          {/* Banner de status de rede */}
+
+          {/* Indicador de status de rede */}
           {!isConnected && (
-            <View style={styles.networkBanner} accessibilityRole="alert">
-              <Text style={styles.networkBannerText}>Sem conexão com a internet</Text>
+            <View style={[
+              styles.networkStatusContainer,
+              isWeb && {
+                marginTop: Math.min(height * 0.03, 30),
+                marginBottom: Math.min(height * 0.03, 30),
+              }
+            ]}>
+              <Animated.View 
+                style={[
+                  styles.networkStatus,
+                  {
+                    transform: [{ scale: pulseAnim }]
+                  }
+                ]} 
+                accessibilityRole="alert"
+              >
+                <Ionicons name="cloud-offline" size={isWeb ? Math.min(width * 0.04, 32) : 20} color="#FFFFFF" />
+                <Text style={[
+                  styles.networkStatusText,
+                  isWeb && {
+                    fontSize: Math.min(width * 0.02, 16),
+                  }
+                ]}>
+                  Sem Conexão com a Internet
+                </Text>
+              </Animated.View>
+              <Text style={[
+                styles.networkHelpText,
+                isWeb && {
+                  fontSize: Math.min(width * 0.015, 14),
+                  marginTop: Math.min(height * 0.01, 8),
+                }
+              ]}>
+                Verifique sua conexão e tente novamente
+              </Text>
             </View>
           )}
 
-          {/** Botão de recarregar em caso de erro */}
-          {hasError && (
+          {error && (
             <View style={[
               styles.errorContainer,
               isWeb && {
-                marginTop: Math.min(height * 0.05, 40),
+                marginTop: Math.min(height * 0.03, 30),
+                marginBottom: Math.min(height * 0.03, 30),
               }
             ]}>
               <TouchableOpacity 
@@ -763,26 +852,29 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
                     fontSize: Math.min(width * 0.02, 16),
                     marginLeft: Math.min(width * 0.015, 12),
                   }
-                ]}>Recarregar</Text>
+                ]}>
+                  Recarregar
+                </Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Indicador de carregamento (Conectando...) */}
-          {isBuffering && (
-            <View style={{ alignItems: 'center', marginTop: 24 }}>
-              <ActivityIndicator size="large" color="#FFFFFF" />
-              <Text style={{ color: '#FFF', marginTop: 8, fontWeight: 'bold', fontSize: 16 }}>
-                Conectando...
-              </Text>
-            </View>
-          )}
-
-          {/* Indicador de reconexão automática */}
           {isReconnecting && (
-            <View style={{ alignItems: 'center', marginTop: 24 }}>
-              <ActivityIndicator size="large" color="#FFFFFF" />
-              <Text style={{ color: '#FFF', marginTop: 8, fontWeight: 'bold', fontSize: 16 }}>
+            <View style={[
+              styles.reconnectingContainer,
+              isWeb && {
+                marginTop: Math.min(height * 0.03, 30),
+                marginBottom: Math.min(height * 0.03, 30),
+              }
+            ]}>
+              <ActivityIndicator size={isWeb ? "large" : "small"} color="#FFFFFF" />
+              <Text style={[
+                styles.reconnectingText,
+                isWeb && {
+                  fontSize: Math.min(width * 0.02, 16),
+                  marginTop: Math.min(height * 0.01, 8),
+                }
+              ]}>
                 Reconectando...
               </Text>
             </View>
@@ -877,36 +969,6 @@ const styles = StyleSheet.create({
   statusContainer: {
     alignItems: 'center',
   },
-  /** Container do indicador "AO VIVO" */
-  liveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  /** Ponto vermelho do indicador "AO VIVO" */
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF0000',
-    marginRight: 8,
-  },
-  /** Texto do indicador "AO VIVO" */
-  liveText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  /** Texto do status "OFFLINE" */
-  offlineText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    opacity: 0.7,
-  },
   /** Container do botão de recarregar */
   errorContainer: {
     marginTop: 20,
@@ -989,21 +1051,40 @@ const styles = StyleSheet.create({
       elevation: 5,
     }),
   },
-  networkBanner: {
-    marginTop: 12,
-    backgroundColor: '#1B4B8F',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  networkStatusContainer: {
+    marginTop: 24,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  networkStatus: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    minWidth: 200,
+    gap: 12,
   },
-  networkBannerText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
+  networkStatusText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
     textAlign: 'center',
+  },
+  networkHelpText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.8,
+  },
+  reconnectingContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  reconnectingText: {
+    color: '#FFFFFF',
+    marginTop: 8,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 }); 

@@ -33,5 +33,9 @@ export const COLORS = {
   },
   SHADOW: {
     COLOR: 'rgba(0, 0, 0, 0.1)',
+    OFFSET: { width: 0, height: 2 },
+    OPACITY: 0.25,
+    RADIUS: 3.84,
   },
+  ERROR: '#FF4444',
 }; 
