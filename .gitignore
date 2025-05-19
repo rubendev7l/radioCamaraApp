@@ -88,4 +88,7 @@ local.properties
 *.temp
 
 # Google Service Account
-google-service-account-key.json 
+google-service-account-key.json
+
+# Google Services
+android/app/google-services/google-service-account-key.json 
