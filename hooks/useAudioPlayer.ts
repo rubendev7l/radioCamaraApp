@@ -10,6 +10,13 @@
  * - Notificações
  * - Persistência de estado
  * 
+ * IMPORTANTE:
+ * - Este hook é crítico para o funcionamento do app
+ * - Nunca altere os valores de MAX_RETRY_ATTEMPTS e RETRY_DELAY
+ * - Mantenha a lógica de reconexão automática
+ * - Preserve o gerenciamento de estado em background
+ * - Mantenha a integração com o ForegroundService
+ * 
  * Funcionalidades:
  * - Reprodução em background
  * - Reconexão automática
@@ -45,12 +52,13 @@ import { useNetworkStatus } from './useNetworkStatus';
 import { RADIO_CONFIG } from '../constants/radio';
 import { ForegroundService } from '../services/ForegroundService';
 
+// Constantes críticas - NÃO ALTERAR
 const PLAYBACK_STATE_KEY = '@radio_playback_state';
-const MAX_RETRY_ATTEMPTS = 3;
-const RETRY_DELAY = 2000;
-const VIBRATION_PATTERN = [0, 100, 200, 100];
-const BACKGROUND_UPDATE_INTERVAL = 5000; // 5 segundos em background
-const FOREGROUND_UPDATE_INTERVAL = 1000; // 1 segundo em foreground
+const MAX_RETRY_ATTEMPTS = 3; // Número máximo de tentativas de reconexão
+const RETRY_DELAY = 2000; // Delay entre tentativas em ms
+const VIBRATION_PATTERN = [0, 100, 200, 100]; // Padrão de vibração para feedback
+const BACKGROUND_UPDATE_INTERVAL = 5000; // Intervalo de atualização em background (5s)
+const FOREGROUND_UPDATE_INTERVAL = 1000; // Intervalo de atualização em foreground (1s)
 
 // Tipos para validação de estado
 type PlaybackState = {
@@ -203,7 +211,7 @@ export const useAudioPlayer = () => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        // App voltou ao foreground
+        // App voltou ao foreground - Otimizar recursos
         if (updateIntervalRef.current) {
           clearInterval(updateIntervalRef.current);
         }
@@ -213,7 +221,7 @@ export const useAudioPlayer = () => {
           }
         }, FOREGROUND_UPDATE_INTERVAL);
       } else if (nextAppState.match(/inactive|background/)) {
-        // App foi para background
+        // App foi para background - Reduzir frequência de atualizações
         if (updateIntervalRef.current) {
           clearInterval(updateIntervalRef.current);
         }

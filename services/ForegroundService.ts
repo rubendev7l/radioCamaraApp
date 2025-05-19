@@ -1,13 +1,29 @@
+/**
+ * Serviço de Foreground para manter o streaming de áudio ativo em background
+ * Este serviço é crítico para o funcionamento do app e deve ser mantido com cuidado
+ * 
+ * IMPORTANTE:
+ * - Nunca altere o ID do canal de notificação ('radio-playback')
+ * - Mantenha a prioridade MAX para garantir que a notificação não seja removida
+ * - O serviço depende das permissões de notificação
+ * - Em caso de problemas, verifique os logs com prefixo 'ForegroundService:'
+ */
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { COLORS } from '../constants/colors';
 
 class ForegroundService {
+  // Singleton para garantir uma única instância do serviço
   private static instance: ForegroundService;
+  // ID do canal de notificação - NÃO ALTERAR
   private notificationChannelId: string | null = null;
+  // ID da notificação atual para gerenciamento
   private currentNotificationId: string | null = null;
+  // Flag de inicialização
   private isInitialized = false;
+  // Listener para interações com a notificação
   private notificationListener: Notifications.Subscription | null = null;
+  // Status das permissões
   private hasPermissions = false;
 
   private constructor() {
@@ -37,6 +53,11 @@ class ForegroundService {
     });
   }
 
+  /**
+   * Inicializa o serviço de foreground
+   * Deve ser chamado antes de qualquer operação
+   * Configura o canal de notificação no Android
+   */
   async initialize() {
     if (this.isInitialized) return;
 
@@ -51,6 +72,8 @@ class ForegroundService {
       }
 
       if (Platform.OS === 'android') {
+        // Configuração do canal de notificação
+        // IMPORTANTE: Manter estas configurações para garantir que a notificação não seja removida
         const channel = await Notifications.setNotificationChannelAsync('radio-playback', {
           name: 'Reprodução da Rádio',
           importance: Notifications.AndroidImportance.MAX,
@@ -63,7 +86,8 @@ class ForegroundService {
         this.notificationChannelId = channel?.id || null;
       }
 
-      // Configurar o comportamento das notificações
+      // Configuração do handler de notificações
+      // IMPORTANTE: Manter estas configurações para garantir que a notificação seja exibida corretamente
       await Notifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
@@ -81,7 +105,11 @@ class ForegroundService {
     }
   }
 
-  async updateNotification(isPlaying: boolean) {
+  /**
+   * Atualiza a notificação com o status atual da reprodução
+   * IMPORTANTE: Chamar sempre que o status de reprodução mudar
+   */
+  async updateNotification(isPlaying: boolean, customMessage?: string) {
     try {
       // Verificar permissões
       const { status } = await Notifications.getPermissionsAsync();
@@ -97,10 +125,11 @@ class ForegroundService {
       }
 
       // Criar nova notificação
+      // IMPORTANTE: Manter estas configurações para garantir que a notificação seja persistente
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Rádio Câmara Sete Lagoas',
-          body: isPlaying ? 'Tocando agora' : 'Pausado',
+          body: customMessage || (isPlaying ? 'Tocando agora' : 'Pausado'),
           data: { type: 'playback' },
           priority: Notifications.AndroidNotificationPriority.MAX,
           vibrate: [0, 250, 250, 250],
@@ -118,6 +147,10 @@ class ForegroundService {
     }
   }
 
+  /**
+   * Remove a notificação atual
+   * IMPORTANTE: Chamar quando o streaming for encerrado
+   */
   async stopNotification() {
     if (!this.hasPermissions) {
       console.log('ForegroundService: Sem permissões para remover notificação');
@@ -137,4 +170,5 @@ class ForegroundService {
   }
 }
 
+// Exporta uma única instância do serviço
 export default ForegroundService.getInstance();

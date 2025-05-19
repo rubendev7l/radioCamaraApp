@@ -34,7 +34,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
 import { Platform, AppState } from 'react-native';
 import { RADIO_CONFIG } from '../constants/radio';
-import { ForegroundService } from '../services/ForegroundService';
+import ForegroundService from '../services/ForegroundService';
 
 const CHECK_INTERVAL = 30000; // 30 segundos
 
@@ -44,6 +44,8 @@ export const useStreamMonitor = () => {
   const [streamError, setStreamError] = useState<string | null>(null);
   const lastStatus = useRef<'online' | 'offline'>('online');
   const appState = useRef(AppState.currentState);
+  const lastNotificationTime = useRef<number>(0);
+  const NOTIFICATION_COOLDOWN = 5000; // 5 segundos de cooldown entre notificações
 
   const checkStreamStatus = async () => {
     try {
@@ -55,7 +57,9 @@ export const useStreamMonitor = () => {
       await sound.unloadAsync();
 
       if (lastStatus.current === 'offline') {
-        await ForegroundService.startService(true);
+        // Garante que a notificação anterior seja removida antes de criar uma nova
+        await ForegroundService.stopNotification();
+        await ForegroundService.updateNotification(true);
         lastStatus.current = 'online';
         setStreamError(null);
       }
@@ -64,9 +68,14 @@ export const useStreamMonitor = () => {
       const errorMessage = 'Transmissão temporariamente fora do ar. Tentaremos reconectar em 30 segundos...';
       setStreamError(errorMessage);
       
-      if (lastStatus.current === 'online') {
-        await ForegroundService.startService(false);
+      // Só atualiza a notificação se passou o tempo de cooldown
+      const now = Date.now();
+      if (lastStatus.current === 'online' && (now - lastNotificationTime.current > NOTIFICATION_COOLDOWN)) {
+        // Garante que a notificação anterior seja removida antes de criar uma nova
+        await ForegroundService.stopNotification();
+        await ForegroundService.updateNotification(false, 'Sem conexão com a internet');
         lastStatus.current = 'offline';
+        lastNotificationTime.current = now;
       }
       setIsStreamOnline(false);
     }

@@ -292,11 +292,18 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       // Verifica as configurações de notificação antes de atualizar
       AsyncStorage.getItem('notificationSettings').then(settings => {
         const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
-        if (wasPlaying !== isNowPlaying && notificationSettings.playback && hasPermissions) {
-          // Só atualiza a notificação se não houver erro
-          if (!status.error) {
-            ForegroundService.updateNotification(isNowPlaying);
-          }
+        // Só atualiza a notificação se:
+        // 1. O estado de reprodução mudou
+        // 2. As notificações estão habilitadas
+        // 3. Tem permissões
+        // 4. Não há erro
+        // 5. Está realmente tocando
+        if (wasPlaying !== isNowPlaying && 
+            notificationSettings.playback && 
+            hasPermissions && 
+            !status.error && 
+            isNowPlaying) {
+          ForegroundService.updateNotification(true);
         }
       });
       
@@ -309,6 +316,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         AsyncStorage.getItem('notificationSettings').then(settings => {
           const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
           if (notificationSettings.playback && hasPermissions) {
+            ForegroundService.stopNotification();
             ForegroundService.updateNotification(false);
           }
         });
@@ -357,6 +365,10 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
         }
       } else {
         console.log('Iniciando reprodução...');
+        // Remove a notificação anterior antes de tentar iniciar o stream
+        if (shouldShowNotification && hasPermissions) {
+          await ForegroundService.stopNotification();
+        }
         await loadAndPlayAudio();
         // Só mostra a notificação se o stream foi carregado com sucesso
         if (shouldShowNotification && hasPermissions && !error) {
@@ -368,6 +380,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       setError('Erro ao alternar reprodução');
       // Remove a notificação em caso de erro
       if (hasPermissions) {
+        await ForegroundService.stopNotification();
         await ForegroundService.updateNotification(false);
       }
     }

@@ -1,171 +1,110 @@
-# 📻 Rádio Câmara Sete Lagoas
+# <img src="assets/images/logo-cm7.png" alt="Rádio Câmara Sete Lagoas" width="200"/>
 
-<div align="center">
-  <img src="assets/images/icon.png" alt="Logo Rádio Câmara" width="200"/>
-  
-  [![Expo](https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev)
-  [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-  [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
-</div>
+[![Expo](https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev)
+[![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://play.google.com/store/apps/details?id=com.cm7.radiocamara)
 
-## 🎯 Sobre o Projeto
+Aplicativo oficial da Rádio Câmara Sete Lagoas, desenvolvido com React Native e Expo. Este aplicativo permite que os cidadãos acompanhem as transmissões ao vivo da Câmara Municipal de Sete Lagoas, com recursos avançados de streaming de áudio e notificações.
 
-Aplicativo oficial da Rádio Câmara Sete Lagoas, desenvolvido para proporcionar acesso fácil e rápido às transmissões ao vivo das sessões legislativas e programas institucionais da Câmara Municipal.
+## 🚀 Funcionalidades
 
-### 📱 Versão Atual
-- **Versão**: 1.0.2
-- **Version Code**: 7
-- **Última Atualização**: 15/05/2025
-
-## ✨ Funcionalidades
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="assets/images/features/live.png" width="100"/>
-        <br/>
-        <b>Transmissão Ao Vivo</b>
-      </td>
-      <td align="center">
-        <img src="assets/images/features/background.png" width="100"/>
-        <br/>
-        <b>Reprodução em Background</b>
-      </td>
-      <td align="center">
-        <img src="assets/images/features/notifications.png" width="100"/>
-        <br/>
-        <b>Notificações</b>
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <img src="assets/images/features/controls.png" width="100"/>
-        <br/>
-        <b>Controles de Áudio</b>
-      </td>
-      <td align="center">
-        <img src="assets/images/features/accessibility.png" width="100"/>
-        <br/>
-        <b>Acessibilidade</b>
-      </td>
-      <td align="center">
-        <img src="assets/images/features/support.png" width="100"/>
-        <br/>
-        <b>Suporte Técnico</b>
-      </td>
-    </tr>
-  </table>
-</div>
+- 📻 Streaming de áudio em tempo real
+- 🔔 Notificações de transmissões
+- 🌙 Modo escuro automático
+- 🔄 Reprodução em background
+- 📱 Interface adaptativa
+- 🔋 Otimização de bateria
+- 🎧 Suporte a fones de ouvido
+- 🚗 Modo carro
 
 ## 🛠️ Tecnologias
 
-- **Expo SDK 52**
-- **React Native 0.76.9**
-- **TypeScript 5.3.0**
-- **Expo AV** (Streaming)
-- **React Navigation** (Navegação)
-- **React Native Reanimated** (Animações)
+- [Expo](https://expo.dev) - Framework para desenvolvimento mobile
+- [React Native](https://reactnative.dev) - Framework UI
+- [TypeScript](https://www.typescriptlang.org) - Tipagem estática
+- [expo-av](https://docs.expo.dev/versions/latest/sdk/audio/) - Streaming de áudio
+- [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) - Notificações push
 
-## 🚀 Começando
+## 📱 Requisitos
 
-### Pré-requisitos
-- Node.js 18.x ou superior
-- npm 9.x ou superior
-- Expo CLI
-- Android Studio (para build nativo)
+- Android 7.0 ou superior
+- Conexão com internet
+- Permissões de notificação
+- Permissões de áudio
 
-### Instalação
+## 🚀 Instalação
 
+1. Clone o repositório:
 ```bash
-# Clone o repositório
-git clone https://github.com/cm7/radio-camara-sete-lagoas.git
-
-# Instale as dependências
-npm install
-
-# Inicie o app
-npx expo start
+git clone https://github.com/cm7/radio-camara-app.git
+cd radio-camara-app
 ```
 
-## 📱 Screenshots
+2. Instale as dependências:
+```bash
+npm install
+```
 
-<div align="center">
-  <img src="assets/images/screenshots/home.png" width="200"/>
-  <img src="assets/images/screenshots/player.png" width="200"/>
-  <img src="assets/images/screenshots/help.png" width="200"/>
-</div>
+3. Execute o aplicativo:
+```bash
+npm run android
+```
 
-## 📦 Estrutura do Projeto
+## 🏗️ Estrutura do Projeto
 
 ```
 radio-camara-app/
-├── app/                    # Rotas e telas (expo-router)
-├── components/            # Componentes UI
-├── hooks/                # Hooks personalizados
-├── context/             # Contextos React
-├── constants/           # Configurações
-├── types/              # Definições de tipos
-└── assets/            # Recursos estáticos
+├── app/                 # Telas do aplicativo
+├── assets/             # Recursos estáticos
+├── components/         # Componentes reutilizáveis
+├── constants/          # Constantes e configurações
+├── hooks/             # Hooks personalizados
+├── services/          # Serviços (Foreground, etc)
+└── utils/             # Funções utilitárias
 ```
 
-## 📚 Documentação
+## 🔧 Configuração de Desenvolvimento
 
-Para informações técnicas detalhadas, consulte o arquivo [DOCUMENTACAO.md](./DOCUMENTACAO.md) que contém:
-- Configurações técnicas
-- Processos de build
-- Otimizações
-- Limitações conhecidas
+1. Instale o [Node.js](https://nodejs.org)
+2. Instale o [Expo CLI](https://docs.expo.dev/get-started/installation/)
+3. Configure o [Android Studio](https://developer.android.com/studio)
+4. Instale o [EAS CLI](https://docs.expo.dev/build/introduction/)
 
-## ⚠️ Importante
+## 📦 Build
 
-NUNCA altere estes elementos:
-1. **Package Name**: `com.cm7.radiocamara`
-2. **Chave de Assinatura**: Gerada pelo EAS
-3. **Version Code**: Sempre incrementar
+### Desenvolvimento
+```bash
+npm run android
+```
 
-## 📞 Suporte
+### Produção
+```bash
+eas build --platform android --profile production
+```
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <b>E-mail</b><br/>
-        rodrigo.cpd@camarasete.mg.gov.br
-      </td>
-      <td align="center">
-        <b>WhatsApp</b><br/>
-        (31) 98634-0773
-      </td>
-      <td align="center">
-        <b>Horário</b><br/>
-        Segunda a Sexta<br/>
-        8h às 17h
-      </td>
-    </tr>
-  </table>
-</div>
+## 📄 Licença
 
-## 🔗 Links Úteis
-
-- [Site Oficial da Câmara](https://www.camarasete.mg.gov.br)
-- [Play Store](link-para-play-store) (em breve)
-- [Documentação Expo](https://docs.expo.dev)
-- [Documentação Expo AV](https://docs.expo.dev/versions/latest/sdk/audio/)
-
-## 📝 Licença
-
-Este projeto está sob a licença [MIT](LICENSE).
+Este projeto é propriedade da Câmara Municipal de Sete Lagoas. Todos os direitos reservados.
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Por favor, leia as diretrizes de contribuição antes de enviar um pull request.
+Para contribuir com o projeto:
+
+1. Faça um fork do repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📞 Suporte
+
+Para suporte técnico ou dúvidas sobre o projeto, entre em contato com a equipe de desenvolvimento da Câmara Municipal de Sete Lagoas.
+
+## 📱 Download
+
+[![Google Play](https://img.shields.io/badge/Google_Play-414141?style=for-the-badge&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.cm7.radiocamara)
 
 ---
 
-<div align="center">
-  <img src="assets/images/camara-logo.png" alt="Logo Câmara" width="150"/>
-  <br/>
-  <sub>Desenvolvido com ❤️ pela equipe de TI da Câmara Municipal de Sete Lagoas</sub>
-</div> 
+Desenvolvido com ❤️ pela equipe de TI da Câmara Municipal de Sete Lagoas 
