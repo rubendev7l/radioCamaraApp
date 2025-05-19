@@ -3,10 +3,10 @@ module.exports = {
   slug: 'radio-camara-sete-lagoas',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: './assets/images/icon.png',
   userInterfaceStyle: 'light',
   splash: {
-    image: './assets/splash.png',
+    image: './assets/images/splash.png',
     resizeMode: 'contain',
     backgroundColor: '#ffffff'
   },
@@ -19,23 +19,22 @@ module.exports = {
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
+      foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff'
     },
     package: 'com.camarasetelagoas.radio',
     googleServicesFile: './android/app/google-services/google-service-account-key.json'
   },
   web: {
-    favicon: './assets/favicon.png'
+    favicon: './assets/images/favicon.png'
   },
   plugins: [
     'expo-router',
     [
       'expo-notifications',
       {
-        icon: './assets/notification-icon.png',
-        color: '#ffffff',
-        sounds: ['./assets/notification-sound.wav']
+        icon: './assets/images/notification-icon.png',
+        color: '#ffffff'
       }
     ]
   ],
