@@ -35,8 +35,17 @@ import { Audio } from 'expo-av';
 import { Platform, AppState } from 'react-native';
 import { RADIO_CONFIG } from '../constants/radio';
 import ForegroundService from '../services/ForegroundService';
+import {
+  STREAM_CHECK_INTERVAL,
+  STREAM_TIMEOUT,
+  NOTIFICATION_COOLDOWN,
+  DEBUG_MODE,
+  LOG_LEVEL
+} from '@env';
 
-const CHECK_INTERVAL = 30000; // 30 segundos
+const CHECK_INTERVAL = parseInt(STREAM_CHECK_INTERVAL);
+const TIMEOUT = parseInt(STREAM_TIMEOUT);
+const COOLDOWN = parseInt(NOTIFICATION_COOLDOWN);
 
 export const useStreamMonitor = () => {
   const checkInterval = useRef<NodeJS.Timeout>();
@@ -45,7 +54,6 @@ export const useStreamMonitor = () => {
   const lastStatus = useRef<'online' | 'offline'>('online');
   const appState = useRef(AppState.currentState);
   const lastNotificationTime = useRef<number>(0);
-  const NOTIFICATION_COOLDOWN = 5000; // 5 segundos de cooldown entre notificações
 
   const checkStreamStatus = async () => {
     try {
@@ -70,7 +78,7 @@ export const useStreamMonitor = () => {
       
       // Só atualiza a notificação se passou o tempo de cooldown
       const now = Date.now();
-      if (lastStatus.current === 'online' && (now - lastNotificationTime.current > NOTIFICATION_COOLDOWN)) {
+      if (lastStatus.current === 'online' && (now - lastNotificationTime.current > COOLDOWN)) {
         // Garante que a notificação anterior seja removida antes de criar uma nova
         await ForegroundService.stopNotification();
         await ForegroundService.updateNotification(false, 'Sem conexão com a internet');

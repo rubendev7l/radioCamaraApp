@@ -11,6 +11,12 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { COLORS } from '../constants/colors';
+import {
+  NOTIFICATION_CHANNEL_ID,
+  NOTIFICATION_CHANNEL_NAME,
+  DEBUG_MODE,
+  LOG_LEVEL
+} from '@env';
 
 class ForegroundService {
   // Singleton para garantir uma única instância do serviço
@@ -67,15 +73,17 @@ class ForegroundService {
       this.hasPermissions = status === 'granted';
 
       if (!this.hasPermissions) {
-        console.log('ForegroundService: Sem permissões de notificação');
+        if (DEBUG_MODE === 'true') {
+          console.log('ForegroundService: Sem permissões de notificação');
+        }
         return;
       }
 
       if (Platform.OS === 'android') {
         // Configuração do canal de notificação
         // IMPORTANTE: Manter estas configurações para garantir que a notificação não seja removida
-        const channel = await Notifications.setNotificationChannelAsync('radio-playback', {
-          name: 'Reprodução da Rádio',
+        const channel = await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
+          name: NOTIFICATION_CHANNEL_NAME,
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: COLORS.PRIMARY,
@@ -98,7 +106,9 @@ class ForegroundService {
       });
 
       this.isInitialized = true;
-      console.log('ForegroundService inicializado com sucesso');
+      if (DEBUG_MODE === 'true') {
+        console.log('ForegroundService inicializado com sucesso');
+      }
     } catch (error) {
       console.error('Erro ao inicializar ForegroundService:', error);
       throw error;
@@ -114,7 +124,9 @@ class ForegroundService {
       // Verificar permissões
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
-        console.log('ForegroundService: Sem permissões para notificação');
+        if (DEBUG_MODE === 'true') {
+          console.log('ForegroundService: Sem permissões para notificação');
+        }
         return;
       }
 
@@ -141,7 +153,9 @@ class ForegroundService {
       });
 
       this.currentNotificationId = notificationId;
-      console.log('Notificação atualizada:', isPlaying ? 'Tocando' : 'Pausado', 'ID:', notificationId);
+      if (DEBUG_MODE === 'true') {
+        console.log('Notificação atualizada:', isPlaying ? 'Tocando' : 'Pausado', 'ID:', notificationId);
+      }
     } catch (error) {
       console.error('Erro ao atualizar notificação:', error);
     }
@@ -153,7 +167,9 @@ class ForegroundService {
    */
   async stopNotification() {
     if (!this.hasPermissions) {
-      console.log('ForegroundService: Sem permissões para remover notificação');
+      if (DEBUG_MODE === 'true') {
+        console.log('ForegroundService: Sem permissões para remover notificação');
+      }
       return;
     }
 
@@ -161,7 +177,9 @@ class ForegroundService {
       try {
         await Notifications.dismissNotificationAsync(this.currentNotificationId);
         this.currentNotificationId = null;
-        console.log('Notificação removida');
+        if (DEBUG_MODE === 'true') {
+          console.log('Notificação removida');
+        }
       } catch (error) {
         console.error('Erro ao remover notificação:', error);
         throw error;
