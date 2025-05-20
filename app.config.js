@@ -1,12 +1,13 @@
 module.exports = {
   name: 'Rádio Câmara Sete Lagoas',
-  slug: 'radio-camara-sete-lagoas',
-  version: '1.0.0',
+  slug: 'radiocamarasetelagoas',
+  version: '1.0.2',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
+  scheme: 'radiocamarasetelagoas',
   splash: {
-    image: './assets/images/splash.png',
+    image: './assets/images/splash-icon.png',
     resizeMode: 'contain',
     backgroundColor: '#ffffff'
   },
@@ -15,15 +16,35 @@ module.exports = {
   ],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.camarasetelagoas.radio'
+    bundleIdentifier: 'com.cm7.radiocamara',
+    infoPlist: {
+      UIBackgroundModes: ['audio', 'fetch', 'remote-notification'],
+      NSMicrophoneUsageDescription: 'Este app não requer acesso ao microfone',
+      UIRequiresPersistentWiFi: true,
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true
+      }
+    }
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      backgroundImage: './assets/images/icon-background.png'
     },
-    package: 'com.camarasetelagoas.radio',
-    googleServicesFile: './android/app/google-services/google-service-account-key.json'
+    package: 'com.cm7.radiocamara',
+    versionCode: 7,
+    permissions: [
+      'FOREGROUND_SERVICE',
+      'WAKE_LOCK',
+      'INTERNET',
+      'ACCESS_NETWORK_STATE',
+      'POST_NOTIFICATIONS',
+      'BLUETOOTH_CONNECT',
+      'REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'
+    ],
+    softwareKeyboardLayoutMode: 'resize',
+    allowBackup: true
   },
   web: {
     favicon: './assets/images/favicon.png'
@@ -31,16 +52,27 @@ module.exports = {
   plugins: [
     'expo-router',
     [
+      'expo-av',
+      {
+        microphonePermission: 'Allow $(PRODUCT_NAME) to access your microphone.'
+      }
+    ],
+    [
       'expo-notifications',
       {
         icon: './assets/images/notification-icon.png',
-        color: '#ffffff'
+        color: '#ffffff',
+        sounds: []
       }
     ]
   ],
   extra: {
     eas: {
-      projectId: 'your-project-id'
+      projectId: 'bc1a10e4-534b-4c0f-94a8-c4928955237e'
     }
+  },
+  owner: 'cm7',
+  runtimeVersion: {
+    policy: 'appVersion'
   }
 }; 

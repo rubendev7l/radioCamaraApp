@@ -11,7 +11,8 @@
     "types": [
       "node",
       "react",
-      "react-native"
+      "react-native",
+      "jest"
     ],
     "allowJs": true,
     "esModuleInterop": true,

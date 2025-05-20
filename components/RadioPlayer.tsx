@@ -46,6 +46,7 @@ import {
   UIManager,
   ActivityIndicator,
   Linking,
+  NativeEventEmitter,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -60,6 +61,9 @@ import { RADIO_CONFIG } from '../constants/radio';
 import { usePermissions } from '../hooks/usePermissions';
 import PlayerControls from './player/PlayerControls';
 import PlayerStatus from './player/PlayerStatus';
+import PowerManager from '../utils/PowerManager';
+import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
+import { BatteryOptimizationStatus } from './BatteryOptimizationStatus';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -126,6 +130,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
   const [isReconnecting, setIsReconnecting] = useState(false);
 
   const [isMuted, setIsMuted] = useState(false);
+
+  const { isOptimized, isChecking, requestIgnoreOptimization } = useBatteryOptimization();
 
   /** 
    * Efeito que controla a animação do indicador "AO VIVO"
@@ -324,65 +330,80 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     }
   }, [isPlaying, hasPermissions]);
 
+  /** 
+   * Verifica se o modo economia de bateria está ativo
+   */
+  const checkBatteryOptimization = useCallback(async () => {
+    if (Platform.OS !== 'android') return false;
+    
+    try {
+      const { PowerManager } = NativeModules;
+      const isIgnoringBatteryOptimizations = await PowerManager.isIgnoringBatteryOptimizations();
+      return !isIgnoringBatteryOptimizations;
+    } catch (error) {
+      console.error('Erro ao verificar otimização de bateria:', error);
+      return false;
+    }
+  }, []);
+
+  /** 
+   * Listener para mudanças no modo economia de bateria
+   */
+  useEffect(() => {
+    const subscription = PowerManager.addListener('batteryOptimizationChanged', (isOptimized) => {
+      if (isOptimized && isPlaying) {
+        Alert.alert(
+          'Modo Economia de Bateria Ativado',
+          'O modo economia de bateria foi ativado e pode interromper a reprodução da rádio. Deseja desativar?',
+          [
+            {
+              text: 'Abrir Configurações',
+              onPress: () => PowerManager.requestIgnoreBatteryOptimizations(),
+            },
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+            },
+          ]
+        );
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isPlaying]);
+
   const togglePlayback = async () => {
     try {
-      if (!hasPermissions) {
-        console.log('Solicitando permissões para reprodução...');
-        const granted = await requestPermissions();
-        if (!granted) {
+      if (!isPlaying) {
+        // Verificar otimização de bateria antes de iniciar
+        if (isOptimized) {
           Alert.alert(
-            'Permissão Necessária',
-            'Para manter a rádio tocando em segundo plano, você precisa permitir as notificações.',
+            'Otimização de Bateria',
+            'Para garantir que a rádio continue tocando em segundo plano, é necessário desativar a otimização de bateria para este aplicativo.',
             [
+              {
+                text: 'Abrir Configurações',
+                onPress: requestIgnoreOptimization,
+              },
               {
                 text: 'Cancelar',
                 style: 'cancel',
-              },
-              {
-                text: 'Abrir Configurações',
-                onPress: () => Linking.openSettings(),
               },
             ]
           );
           return;
         }
-        console.log('Permissões concedidas, ativando notificações...');
-        setNotificationsEnabled(true);
-        await AsyncStorage.setItem('notificationSettings', JSON.stringify({ playback: true }));
-        await ForegroundService.initialize();
-      }
 
-      // Verifica as configurações de notificação antes de atualizar
-      const settings = await AsyncStorage.getItem('notificationSettings');
-      const notificationSettings = settings ? JSON.parse(settings) : { playback: true };
-      const shouldShowNotification = notificationSettings.playback;
-
-      if (isPlaying) {
-        console.log('Parando reprodução...');
-        await stopAudio();
-        if (shouldShowNotification && hasPermissions) {
-          await ForegroundService.updateNotification(false);
-        }
-      } else {
-        console.log('Iniciando reprodução...');
-        // Remove a notificação anterior antes de tentar iniciar o stream
-        if (shouldShowNotification && hasPermissions) {
-          await ForegroundService.stopNotification();
-        }
+        // Iniciar reprodução
         await loadAndPlayAudio();
-        // Só mostra a notificação se o stream foi carregado com sucesso
-        if (shouldShowNotification && hasPermissions && !error) {
-          await ForegroundService.updateNotification(true);
-        }
+      } else {
+        await stopAudio();
       }
     } catch (error) {
-      console.error('Erro ao alternar reprodução:', error);
-      setError('Erro ao alternar reprodução');
-      // Remove a notificação em caso de erro
-      if (hasPermissions) {
-        await ForegroundService.stopNotification();
-        await ForegroundService.updateNotification(false);
-      }
+      console.error('Error toggling playback:', error);
+      Alert.alert('Erro', 'Não foi possível controlar a reprodução. Tente novamente.');
     }
   };
 
@@ -634,6 +655,25 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     }
   }, [isConnected]);
 
+  useEffect(() => {
+    if (isOptimized && isPlaying) {
+      Alert.alert(
+        'Modo Economia de Bateria Ativado',
+        'O modo economia de bateria foi ativado e pode interromper a reprodução da rádio. Deseja desativar?',
+        [
+          {
+            text: 'Abrir Configurações',
+            onPress: requestIgnoreOptimization,
+          },
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+        ]
+      );
+    }
+  }, [isOptimized, isPlaying]);
+
   /** 
    * Renderiza o player de rádio com layout responsivo
    * Adapta-se para web e mobile com diferentes tamanhos
@@ -642,81 +682,80 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
     <ImageBackground
       source={require('../assets/images/background.jpg')}
       style={styles.background}
-      resizeMode="cover"
+      imageStyle={styles.backgroundImage}
     >
-      <View style={[
-        styles.content,
-        isWeb && {
-          flex: 1,
-          width: '100%',
-          height: height,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: Math.min(width * 0.05, 20),
-        }
-      ]}>
-        <View style={[
-          styles.innerContent,
-          isWeb && {
-            width: '100%',
-            maxWidth: Math.min(width * 0.9, 800),
-            alignItems: 'center',
-            justifyContent: 'center',
-          }
-        ]}>
-          <Animated.Text 
-            style={[
-              styles.description,
-              isWeb && {
-                fontSize: Math.min(width * 0.02, 16),
-                marginBottom: Math.min(height * 0.02, 20),
-              },
-              {
-                opacity: descriptionOpacity,
-                transform: [{ translateY: descriptionTranslateY }],
-              }
-            ]}
-          >
-            A voz do legislativo de Sete Lagoas
-          </Animated.Text>
-
-          <Image 
+      <View style={styles.content}>
+        <View style={styles.innerContent}>
+          <Image
             source={require('../assets/images/logo-white.png')}
             style={[
               styles.logo,
               isWeb && {
-                width: Math.min(width * 0.4, 400),
-                height: Math.min(height * 0.3, 300),
-                marginBottom: Math.min(height * 0.02, 20),
+                width: Math.min(width * 0.4, 280),
+                height: Math.min(width * 0.3, 200),
               }
             ]}
             resizeMode="contain"
           />
-          
-          <View style={[
-            styles.waveContainer,
-            isWeb && {
-              width: '100%',
-              maxWidth: Math.min(width * 0.9, 800),
-              marginBottom: Math.min(height * 0.03, 30),
-            }
-          ]}>
+
+          <View style={styles.waveContainer}>
             <AudioWave isPlaying={isPlaying} />
           </View>
-        
+
           <View style={[
             styles.controls,
             isWeb && {
-              width: '100%',
-              maxWidth: Math.min(width * 0.6, 600),
-              justifyContent: 'center',
-              marginBottom: Math.min(height * 0.04, 40),
+              marginTop: Math.min(height * 0.04, 32),
             }
           ]}>
             <TouchableOpacity
               style={[
                 styles.controlButton,
-                { minWidth: 44, minHeight: 44 },
+                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
+                isWeb && {
+                  width: Math.min(width * 0.15, 80),
+                  height: Math.min(width * 0.15, 80),
+                  borderRadius: Math.min(width * 0.075, 40),
+                }
+              ]}
+              onPress={handleExit}
+              activeOpacity={0.7}
+              accessibilityLabel="Fechar player"
+              accessibilityRole="button"
+            >
+              <Ionicons 
+                name="close" 
+                size={isWeb ? Math.min(width * 0.04, 32) : 24}
+                color="#1B4B8F"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.playButton,
+                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
+                isWeb && {
+                  width: Math.min(width * 0.2, 90),
+                  height: Math.min(width * 0.2, 90),
+                  borderRadius: Math.min(width * 0.1, 45),
+                }
+              ]}
+              onPress={togglePlayback}
+              activeOpacity={0.7}
+              accessibilityLabel={isPlaying ? "Pausar rádio" : "Tocar rádio"}
+              accessibilityRole="button"
+            >
+              <Ionicons 
+                name={isPlaying ? "pause" : "play"} 
+                size={isWeb ? Math.min(width * 0.06, 48) : 36}
+                color="#1B4B8F"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
                 isWeb && {
                   width: Math.min(width * 0.15, 80),
                   height: Math.min(width * 0.15, 80),
@@ -731,29 +770,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               <Ionicons 
                 name={isMuted ? "volume-mute" : "volume-high"} 
                 size={isWeb ? Math.min(width * 0.04, 32) : 24}
-                color="white" 
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.playButton,
-                { minWidth: 64, minHeight: 64 },
-                isWeb && {
-                  width: Math.min(width * 0.2, 120),
-                  height: Math.min(width * 0.2, 120),
-                  borderRadius: Math.min(width * 0.1, 60),
-                }
-              ]}
-              onPress={togglePlayback}
-              activeOpacity={0.7}
-              accessibilityLabel={isPlaying ? "Pausar" : "Tocar"}
-              accessibilityRole="button"
-            >
-              <Ionicons 
-                name={isPlaying ? "pause" : "play"} 
-                size={isWeb ? Math.min(width * 0.06, 48) : 32}
-                color="white" 
+                color="#1B4B8F"
               />
             </TouchableOpacity>
 
@@ -791,7 +808,7 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               <PlayerStatus 
                 isPlaying={isPlaying} 
                 isBuffering={isBuffering} 
-                error={error} 
+                error={error}
               />
             </View>
           </View>
@@ -892,6 +909,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
               </Text>
             </View>
           )}
+
+          <BatteryOptimizationStatus />
         </View>
       </View>
     </ImageBackground>
