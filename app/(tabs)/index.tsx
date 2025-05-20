@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Updates from 'expo-updates';
+import { COLORS } from '../../constants/colors';
 
 function useOtaUpdateNotifier() {
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function HomeScreen() {
         <Ionicons 
           name="help-circle-outline" 
           size={isSmallScreen ? 24 : 28} 
-          color="#007AFF" 
+          color="#FFFFFF" 
         />
       </TouchableOpacity>
       <View style={[
@@ -99,12 +100,12 @@ const styles = StyleSheet.create({
   helpIcon: {
     position: 'absolute',
     top: 48,
-    right: 16,
+    left: 16,
     zIndex: 10,
-    backgroundColor: '#E6F0FF',
+    backgroundColor: COLORS.PRIMARY,
     borderRadius: 20,
     padding: 4,
-    shadowColor: '#007AFF',
+    shadowColor: COLORS.PRIMARY,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   },
   helpIconSmall: {
     top: 40,
-    right: 12,
+    left: 12,
     borderRadius: 16,
     padding: 3,
   },

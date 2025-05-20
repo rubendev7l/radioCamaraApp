@@ -36,7 +36,7 @@ export default function PlayerControls({
         <Ionicons 
           name={isPlaying ? "volume-mute" : "volume-high"} 
           size={24}
-          color="white" 
+          color="#E6F0FF" 
         />
       </TouchableOpacity>
 
@@ -50,12 +50,12 @@ export default function PlayerControls({
         <Ionicons 
           name={isPlaying ? "pause" : "play"} 
           size={32}
-          color="white" 
+          color="#E6F0FF" 
         />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.controlButton, { backgroundColor: '#E6F0FF' }]}
+        style={styles.controlButton}
         onPress={() => handlePress(onShare)}
         activeOpacity={0.7}
         accessibilityLabel="Compartilhar a rádio"
@@ -64,7 +64,7 @@ export default function PlayerControls({
         <Ionicons 
           name="share-social" 
           size={24}
-          color="#1B4B8F"
+          color="#E6F0FF"
         />
       </TouchableOpacity>
     </View>
@@ -75,24 +75,26 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 32,
+    paddingHorizontal: 16,
   },
   controlButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 15,
+    marginHorizontal: 20,
   },
   playButton: {
     width: 90,
     height: 90,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 45,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 15,
+    marginHorizontal: 20,
   },
 }); 

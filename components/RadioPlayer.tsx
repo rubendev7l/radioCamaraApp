@@ -64,6 +64,7 @@ import PlayerStatus from './player/PlayerStatus';
 import PowerManager from '../utils/PowerManager';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import { BatteryOptimizationStatus } from './BatteryOptimizationStatus';
+import { COLORS } from '../constants/colors';
 
 /** 
  * Interface que define a estrutura de uma estação de rádio
@@ -685,6 +686,15 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
       imageStyle={styles.backgroundImage}
     >
       <View style={styles.content}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onExit}
+          accessibilityLabel="Sair do aplicativo"
+          accessibilityHint="Fecha o aplicativo"
+        >
+          <Ionicons name="close" size={24} color={COLORS.PRIMARY} />
+        </TouchableOpacity>
+
         <View style={styles.innerContent}>
           <Image
             source={require('../assets/images/logo-white.png')}
@@ -711,55 +721,11 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             <TouchableOpacity
               style={[
                 styles.controlButton,
-                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
+                { minWidth: 64, minHeight: 64, backgroundColor: '#E6F0FF' },
                 isWeb && {
-                  width: Math.min(width * 0.15, 80),
-                  height: Math.min(width * 0.15, 80),
-                  borderRadius: Math.min(width * 0.075, 40),
-                }
-              ]}
-              onPress={handleExit}
-              activeOpacity={0.7}
-              accessibilityLabel="Fechar player"
-              accessibilityRole="button"
-            >
-              <Ionicons 
-                name="close" 
-                size={isWeb ? Math.min(width * 0.04, 32) : 24}
-                color="#1B4B8F"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.playButton,
-                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
-                isWeb && {
-                  width: Math.min(width * 0.2, 90),
-                  height: Math.min(width * 0.2, 90),
-                  borderRadius: Math.min(width * 0.1, 45),
-                }
-              ]}
-              onPress={togglePlayback}
-              activeOpacity={0.7}
-              accessibilityLabel={isPlaying ? "Pausar rádio" : "Tocar rádio"}
-              accessibilityRole="button"
-            >
-              <Ionicons 
-                name={isPlaying ? "pause" : "play"} 
-                size={isWeb ? Math.min(width * 0.06, 48) : 36}
-                color="#1B4B8F"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.controlButton,
-                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
-                isWeb && {
-                  width: Math.min(width * 0.15, 80),
-                  height: Math.min(width * 0.15, 80),
-                  borderRadius: Math.min(width * 0.075, 40),
+                  width: Math.min(width * 0.2, 100),
+                  height: Math.min(width * 0.2, 100),
+                  borderRadius: Math.min(width * 0.1, 50),
                 }
               ]}
               onPress={toggleMute}
@@ -769,19 +735,36 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             >
               <Ionicons 
                 name={isMuted ? "volume-mute" : "volume-high"} 
-                size={isWeb ? Math.min(width * 0.04, 32) : 24}
-                color="#1B4B8F"
+                size={32}
+                color={COLORS.PRIMARY}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.playButton,
+                { backgroundColor: '#E6F0FF' }
+              ]}
+              onPress={togglePlayback}
+              activeOpacity={0.7}
+              accessibilityLabel={isPlaying ? "Pausar rádio" : "Tocar rádio"}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name={isPlaying ? "pause" : "play"}
+                size={48}
+                color={COLORS.PRIMARY}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.controlButton,
-                { minWidth: 44, minHeight: 44, backgroundColor: '#E6F0FF' },
+                { minWidth: 64, minHeight: 64, backgroundColor: '#E6F0FF' },
                 isWeb && {
-                  width: Math.min(width * 0.15, 80),
-                  height: Math.min(width * 0.15, 80),
-                  borderRadius: Math.min(width * 0.075, 40),
+                  width: Math.min(width * 0.2, 100),
+                  height: Math.min(width * 0.2, 100),
+                  borderRadius: Math.min(width * 0.1, 50),
                 }
               ]}
               onPress={handleShare}
@@ -791,8 +774,8 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             >
               <Ionicons 
                 name="share-social" 
-                size={isWeb ? Math.min(width * 0.04, 32) : 24}
-                color="#1B4B8F"
+                size={32}
+                color={COLORS.PRIMARY}
               />
             </TouchableOpacity>
           </View>
@@ -813,7 +796,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
             </View>
           </View>
 
-          {/* Indicador de status de rede */}
           {!isConnected && (
             <View style={[
               styles.networkStatusContainer,
@@ -841,15 +823,6 @@ export function RadioPlayer({ currentStation, onExit }: RadioPlayerProps) {
                   Sem Conexão com a Internet
                 </Text>
               </Animated.View>
-              <Text style={[
-                styles.networkHelpText,
-                isWeb && {
-                  fontSize: Math.min(width * 0.015, 14),
-                  marginTop: Math.min(height * 0.01, 8),
-                }
-              ]}>
-                Verifique sua conexão e tente novamente
-              </Text>
             </View>
           )}
 
@@ -973,23 +946,23 @@ const styles = StyleSheet.create({
   },
   /** Estilo dos botões de controle (mudo e fechar) */
   controlButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E6F0FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 15,
+    marginHorizontal: 20,
   },
   /** Estilo do botão principal de play/pause */
   playButton: {
-    width: 90,
-    height: 90,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#E6F0FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 15,
+    marginHorizontal: 20,
   },
   /** Container do status de transmissão */
   statusWrapper: {
@@ -1118,5 +1091,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 }); 

@@ -4,15 +4,17 @@ const { PowerManager } = NativeModules;
 
 class PowerManagerModule {
   private eventEmitter: NativeEventEmitter | null = null;
+  private isModuleAvailable: boolean;
 
   constructor() {
-    if (Platform.OS === 'android') {
+    this.isModuleAvailable = Platform.OS === 'android' && PowerManager != null;
+    if (this.isModuleAvailable) {
       this.eventEmitter = new NativeEventEmitter(PowerManager);
     }
   }
 
   async isIgnoringBatteryOptimizations(): Promise<boolean> {
-    if (Platform.OS !== 'android') return true;
+    if (!this.isModuleAvailable) return true;
     try {
       return await PowerManager.isIgnoringBatteryOptimizations();
     } catch (error) {
@@ -22,7 +24,7 @@ class PowerManagerModule {
   }
 
   async requestIgnoreBatteryOptimizations(): Promise<boolean> {
-    if (Platform.OS !== 'android') return true;
+    if (!this.isModuleAvailable) return true;
     try {
       return await PowerManager.requestIgnoreBatteryOptimizations();
     } catch (error) {
@@ -32,11 +34,15 @@ class PowerManagerModule {
   }
 
   addListener(eventName: string, callback: (isOptimized: boolean) => void) {
-    if (Platform.OS !== 'android' || !this.eventEmitter) return { remove: () => {} };
+    if (!this.isModuleAvailable || !this.eventEmitter) {
+      return { remove: () => {} };
+    }
     
     // Inicia a verificação periódica do status
     const interval = setInterval(() => {
-      PowerManager.checkBatteryOptimizationStatus();
+      if (this.isModuleAvailable) {
+        PowerManager.checkBatteryOptimizationStatus();
+      }
     }, 5000); // Verifica a cada 5 segundos
 
     const subscription = this.eventEmitter.addListener(eventName, callback);

@@ -5,6 +5,7 @@ import PowerManager from '../utils/PowerManager';
 export const useBatteryOptimization = () => {
   const [isOptimized, setIsOptimized] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const checkOptimization = async () => {
     if (Platform.OS !== 'android') {
@@ -16,9 +17,11 @@ export const useBatteryOptimization = () => {
     try {
       const isIgnoring = await PowerManager.isIgnoringBatteryOptimizations();
       setIsOptimized(!isIgnoring);
+      setHasError(false);
     } catch (error) {
       console.error('Error checking battery optimization:', error);
       setIsOptimized(false);
+      setHasError(true);
     } finally {
       setIsChecking(false);
     }
@@ -32,9 +35,11 @@ export const useBatteryOptimization = () => {
       if (success) {
         await checkOptimization();
       }
+      setHasError(false);
       return success;
     } catch (error) {
       console.error('Error requesting battery optimization:', error);
+      setHasError(true);
       return false;
     }
   };
@@ -44,6 +49,7 @@ export const useBatteryOptimization = () => {
 
     const subscription = PowerManager.addListener('batteryOptimizationChanged', (isOptimized) => {
       setIsOptimized(isOptimized);
+      setHasError(false);
     });
 
     return () => {
@@ -54,6 +60,7 @@ export const useBatteryOptimization = () => {
   return {
     isOptimized,
     isChecking,
+    hasError,
     checkOptimization,
     requestIgnoreOptimization,
   };
